@@ -14,12 +14,20 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import QObject, QThread, pyqtSignal, QTimer
 from PyQt6.QtGui import QFont
 
-class FileProcessorWorker(QObject):
-
+class BaseWorker(QObject):
     status_updated = pyqtSignal(str)
     log_message = pyqtSignal(str)
     progress_updated = pyqtSignal(int, int)
     finished = pyqtSignal(bool)
+
+    def __init__(self):
+        super().__init__()
+        self._stop_requested = False
+
+    def stop_processing(self):
+        self._stop_requested = True
+
+class FileProcessorWorker(BaseWorker):
     preview_ready = pyqtSignal(list)
 
     def __init__(self):
@@ -34,12 +42,11 @@ class FileProcessorWorker(QObject):
         self.ignored_paths = []
         self.ignored_extensions = []
         self.is_preview_mode = False
-        self._stop_requested = False
 
     def setup_parameters(self, folder_path: str, find_text: str, replace_text: str,
-            case_sensitive: bool, whole_words: bool, include_subfolders: bool,
-            ignored_extensions: List[str], ignored_paths: List[str],
-            ignored_words: List[str], is_preview: bool = False):
+                        case_sensitive: bool, whole_words: bool, include_subfolders: bool,
+                        ignored_extensions: List[str], ignored_paths: List[str],
+                        ignored_words: List[str], is_preview: bool = False):
         self.folder_path = folder_path
         self.find_text = find_text
         self.replace_text = replace_text
@@ -50,10 +57,6 @@ class FileProcessorWorker(QObject):
         self.ignored_paths = [os.path.normpath(path) for path in ignored_paths]
         self.ignored_extensions = [ext.lower().strip() for ext in ignored_extensions]
         self.is_preview_mode = is_preview
-        self._stop_requested = False
-
-    def stop_processing(self):
-        self._stop_requested = True
 
     def run(self):
         try:
@@ -67,7 +70,6 @@ class FileProcessorWorker(QObject):
 
     def _run_preview(self):
         self.status_updated.emit("Сканирование папки для предпросмотра...")
-
         try:
             matches = []
             all_items = self._get_all_items()
@@ -89,6 +91,7 @@ class FileProcessorWorker(QObject):
 
                 if self._should_ignore_path(item_path):
                     continue
+
                 if not (os.path.isfile(item_path) and self._should_completely_ignore_file(item_path)):
                     if os.path.isfile(item_path) and not self._should_ignore_file(item_path):
                         try:
@@ -101,6 +104,7 @@ class FileProcessorWorker(QObject):
                                         break
                                 except UnicodeDecodeError:
                                     continue
+
                             if content is not None and self._contains_ignored_word(content):
                                 continue
                         except Exception:
@@ -140,11 +144,7 @@ class FileProcessorWorker(QObject):
             all_items = self._get_all_items()
             replaced_count = 0
 
-            filtered_items = []
-            for item_path in all_items:
-                if not self._contains_ignored_word(item_path):
-                    filtered_items.append(item_path)
-
+            filtered_items = [item_path for item_path in all_items if not self._contains_ignored_word(item_path)]
             files = [item for item in filtered_items if os.path.isfile(item)]
 
             for i, file_path in enumerate(files):
@@ -198,6 +198,7 @@ class FileProcessorWorker(QObject):
                             items.append(str(item))
         except PermissionError:
             self.log_message.emit(f"Нет доступа к папке: {self.folder_path}")
+
         return items
 
     def _text_matches(self, text: str) -> bool:
@@ -234,10 +235,7 @@ class FileProcessorWorker(QObject):
             return False
 
         text_lower = text.lower()
-        for word in self.ignored_words:
-            if word in text_lower:
-                return True
-        return False
+        return any(word in text_lower for word in self.ignored_words)
 
     def _should_ignore_file(self, file_path: str) -> bool:
         binary_extensions = {
@@ -265,25 +263,11 @@ class FileProcessorWorker(QObject):
             return False
 
         item_path_norm = os.path.normpath(item_path)
-
-        for ignored_path in self.ignored_paths:
-            if os.path.isfile(ignored_path):
-                if item_path_norm == ignored_path:
-                    return True
-            else:
-                if item_path_norm.startswith(ignored_path + os.sep) or item_path_norm == ignored_path:
-                    return True
-
-        return False
+        return any(item_path_norm.startswith(ignored_path + os.sep) or item_path_norm == ignored_path
+                   for ignored_path in self.ignored_paths)
 
     def _check_file_content(self, file_path: str) -> List[Dict]:
-        if self._should_ignore_path(file_path):
-            return []
-
-        if self._should_completely_ignore_file(file_path):
-            return []
-
-        if self._should_ignore_file(file_path):
+        if self._should_ignore_path(file_path) or self._should_completely_ignore_file(file_path) or self._should_ignore_file(file_path):
             return []
 
         try:
@@ -298,10 +282,7 @@ class FileProcessorWorker(QObject):
                 except UnicodeDecodeError:
                     continue
 
-            if content is None:
-                return []
-
-            if self._contains_ignored_word(content):
+            if content is None or self._contains_ignored_word(content):
                 return []
 
             matches = []
@@ -322,13 +303,7 @@ class FileProcessorWorker(QObject):
             return []
 
     def _process_file_content(self, file_path: str) -> bool:
-        if self._should_ignore_path(file_path):
-            return False
-
-        if self._should_completely_ignore_file(file_path):
-            return False
-
-        if self._should_ignore_file(file_path):
+        if self._should_ignore_path(file_path) or self._should_completely_ignore_file(file_path) or self._should_ignore_file(file_path):
             return False
 
         try:
@@ -345,17 +320,10 @@ class FileProcessorWorker(QObject):
                 except UnicodeDecodeError:
                     continue
 
-            if content is None:
-                return False
-
-            if self._contains_ignored_word(content):
-                return False
-
-            if not self._text_matches(content):
+            if content is None or self._contains_ignored_word(content) or not self._text_matches(content):
                 return False
 
             new_content = self._replace_text_in_string(content)
-
             old_count = content.count(self.find_text) if not self.whole_words else len(re.findall(r'\b' + re.escape(self.find_text) + r'\b', content, re.IGNORECASE if not self.case_sensitive else 0))
 
             with open(file_path, 'w', encoding=used_encoding) as f:
@@ -370,31 +338,26 @@ class FileProcessorWorker(QObject):
 
     def _process_item_name(self, item_path: str) -> bool:
         try:
-            if self._should_ignore_path(item_path):
+            if self._should_ignore_path(item_path) or (os.path.isfile(item_path) and self._should_completely_ignore_file(item_path)):
                 return False
 
-            if os.path.isfile(item_path) and self._should_completely_ignore_file(item_path):
-                return False
+            if os.path.isfile(item_path) and not self._should_ignore_file(item_path):
+                try:
+                    encodings = ['utf-8', 'cp1251', 'latin-1']
+                    content = None
 
-            if os.path.isfile(item_path):
-                if not self._should_ignore_file(item_path):
-                    try:
-                        encodings = ['utf-8', 'cp1251', 'latin-1']
-                        content = None
+                    for encoding in encodings:
+                        try:
+                            with open(item_path, 'r', encoding=encoding) as f:
+                                content = f.read()
+                                break
+                        except UnicodeDecodeError:
+                            continue
 
-                        for encoding in encodings:
-                            try:
-                                with open(item_path, 'r', encoding=encoding) as f:
-                                    content = f.read()
-                                    break
-                            except UnicodeDecodeError:
-                                continue
-
-                        if content is not None and self._contains_ignored_word(content):
-                            return False
-
-                    except Exception:
-                        pass
+                    if content is not None and self._contains_ignored_word(content):
+                        return False
+                except Exception:
+                    pass
 
             item_name = os.path.basename(item_path)
 
@@ -419,7 +382,6 @@ class FileProcessorWorker(QObject):
             return False
 
 class PreviewDialog(QDialog):
-
     def __init__(self, matches: List[Dict], parent=None):
         super().__init__(parent)
         self.matches = matches
@@ -473,7 +435,6 @@ class PreviewDialog(QDialog):
         self.tree.resizeColumnToContents(0)
 
 class LogViewerDialog(QDialog):
-
     def __init__(self, logs: str, parent=None):
         super().__init__(parent)
         self.logs = logs
@@ -524,7 +485,6 @@ class LogViewerDialog(QDialog):
         self.log_text.setTextCursor(cursor)
 
 class MainWindow(QMainWindow):
-
     def __init__(self):
         super().__init__()
         self.logs = []
@@ -534,7 +494,7 @@ class MainWindow(QMainWindow):
         self.init_ui()
 
     def init_ui(self):
-        self.setWindowTitle("TextReplacer Pro")
+        self.setWindowTitle("Replitex")
         self.setGeometry(100, 100, 600, 500)
 
         central_widget = QWidget()
@@ -700,8 +660,7 @@ class MainWindow(QMainWindow):
             return []
 
         extensions = [ext.strip() for ext in text.split(',')]
-        extensions = [ext if ext.startswith('.') else f'.{ext}' for ext in extensions if ext]
-        return extensions
+        return [ext if ext.startswith('.') else f'.{ext}' for ext in extensions if ext]
 
     def _get_ignored_words(self) -> List[str]:
         text = self.ignored_words_input.text().strip()
@@ -764,11 +723,7 @@ class MainWindow(QMainWindow):
                 root.removeChild(current_item)
 
     def _get_ignored_paths(self) -> List[str]:
-        paths = []
-        for i in range(self.ignored_paths_list.topLevelItemCount()):
-            item = self.ignored_paths_list.topLevelItem(i)
-            paths.append(item.text(0))
-        return paths
+        return [self.ignored_paths_list.topLevelItem(i).text(0) for i in range(self.ignored_paths_list.topLevelItemCount())]
 
     def show_preview(self):
         if not self._validate_inputs():
