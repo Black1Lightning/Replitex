@@ -125,7 +125,6 @@ class FileProcessorWorker(BaseWorker):
                             if self._text_matches(item_name):
                                 self._simulate_copy_with_replace(item_path, self.folder_path)
                 if self.mode == 'copy1':
-                    # Additional loop for top-level files with only content matching
                     for item_path in all_items:
                         if self._stop_requested:
                             break
@@ -135,7 +134,7 @@ class FileProcessorWorker(BaseWorker):
                             continue
                         item_name = os.path.basename(item_path)
                         if self._text_matches(item_name):
-                            continue  # Already handled
+                            continue
                         if self._should_ignore_path(item_path) or self._contains_ignored_word(item_name) or self._should_ignore_file(item_path) or self._should_completely_ignore_file(item_path):
                             continue
                         content = self._read_file(item_path)
@@ -258,7 +257,6 @@ class FileProcessorWorker(BaseWorker):
                         'matches': content_matches,
                         'is_file': True
                     })
-        # Additional loop for files with only content matching
         for item in items:
             source_item_path = os.path.join(source_path, item)
             if os.path.isfile(source_item_path) and not self._text_matches(item):
@@ -337,7 +335,6 @@ class FileProcessorWorker(BaseWorker):
             all_top_items = [str(item) for item in Path(self.folder_path).iterdir()]
             filtered_items = [item_path for item_path in all_top_items if not self._contains_ignored_word(item_path) and not self._should_ignore_path(item_path)]
             created_count = 0
-            # First, handle name matches
             for i, item_path in enumerate(filtered_items):
                 if self._stop_requested:
                     break
@@ -348,14 +345,13 @@ class FileProcessorWorker(BaseWorker):
                     continue
                 if self._process_copy_with_replace(item_path, self.folder_path):
                     created_count += 1
-            # Additional handling for top-level files with only content matches
             all_top_files = [p for p in all_top_items if os.path.isfile(p)]
             for file_path in all_top_files:
                 if self._stop_requested:
                     break
                 item_name = os.path.basename(file_path)
                 if self._text_matches(item_name):
-                    continue  # Already handled
+                    continue
                 if self._contains_ignored_word(item_name) or self._should_ignore_path(file_path) or self._should_ignore_file(file_path) or self._should_completely_ignore_file(file_path):
                     continue
                 content = self._read_file(file_path)
@@ -436,7 +432,6 @@ class FileProcessorWorker(BaseWorker):
             return
         items = sorted(os.listdir(path))
         created_dirs = []
-        # Handle name matches
         for item in items:
             item_path = os.path.join(path, item)
             if self._should_ignore_path(item_path) or self._contains_ignored_word(item_path) or self._contains_ignored_word(item):
@@ -466,7 +461,6 @@ class FileProcessorWorker(BaseWorker):
                 shutil.copytree(item_path, new_path, dirs_exist_ok=True)
                 self.log_message.emit(f"Папка скопирована: {new_path} (переименована из {item})")
                 created_dirs.append(new_path)
-        # Additional handling for files with only content matches
         for item in items:
             item_path = os.path.join(path, item)
             if os.path.isfile(item_path) and not self._text_matches(item):
@@ -596,7 +590,7 @@ class FileProcessorWorker(BaseWorker):
         if self._should_ignore_path(file_path) or self._should_completely_ignore_file(file_path) or self._should_ignore_file(file_path):
             return False
         content = self._read_file(file_path)
-        used_encoding = 'utf-8'  # default
+        used_encoding = 'utf-8'
         if content is None:
             encodings = ['utf-8', 'cp1251', 'latin-1']
             for encoding in encodings:
