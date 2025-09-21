@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Dict
 import shutil
+from PyQt6.QtCore import QSettings
 
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
@@ -124,39 +125,38 @@ class FileProcessorWorker(BaseWorker):
                         if Path(item_path).parent == Path(self.folder_path):
                             if self._text_matches(item_name):
                                 self._simulate_copy_with_replace(item_path, self.folder_path)
-                if self.mode == 'copy1':
-                    for item_path in all_items:
-                        if self._stop_requested:
-                            break
-                        if Path(item_path).parent != Path(self.folder_path):
-                            continue
-                        if not os.path.isfile(item_path):
-                            continue
-                        item_name = os.path.basename(item_path)
-                        if self._text_matches(item_name):
-                            continue
-                        if self._should_ignore_path(item_path) or self._contains_ignored_word(item_name) or self._should_ignore_file(item_path) or self._should_completely_ignore_file(item_path):
-                            continue
-                        content = self._read_file(item_path)
-                        if content is None or self._contains_ignored_word(content) or not self._text_matches(content):
-                            continue
-                        new_name = self._get_unique_name(item_name, self.folder_path)
-                        target = os.path.join(self.folder_path, new_name)
+                for item_path in all_items:
+                    if self._stop_requested:
+                        break
+                    if Path(item_path).parent != Path(self.folder_path):
+                        continue
+                    if not os.path.isfile(item_path):
+                        continue
+                    item_name = os.path.basename(item_path)
+                    if self._text_matches(item_name):
+                        continue
+                    if self._should_ignore_path(item_path) or self._contains_ignored_word(item_name) or self._should_ignore_file(item_path) or self._should_completely_ignore_file(item_path):
+                        continue
+                    content = self._read_file(item_path)
+                    if content is None or self._contains_ignored_word(content) or not self._text_matches(content):
+                        continue
+                    new_name = self._get_unique_name(item_name, self.folder_path)
+                    target = os.path.join(self.folder_path, new_name)
+                    self.temp_matches.append({
+                        'path': target,
+                        'type': 'created_content',
+                        'old_name': item_name,
+                        'new_name': new_name,
+                        'is_file': True
+                    })
+                    content_matches = self._check_file_content(item_path)
+                    if content_matches:
                         self.temp_matches.append({
                             'path': target,
-                            'type': 'created_content',
-                            'old_name': item_name,
-                            'new_name': new_name,
+                            'type': 'content',
+                            'matches': content_matches,
                             'is_file': True
                         })
-                        content_matches = self._check_file_content(item_path)
-                        if content_matches:
-                            self.temp_matches.append({
-                                'path': target,
-                                'type': 'content',
-                                'matches': content_matches,
-                                'is_file': True
-                            })
             self.preview_ready.emit(self.temp_matches)
             self.status_updated.emit("Предпросмотр завершён")
             self.finished.emit(True)
@@ -165,7 +165,6 @@ class FileProcessorWorker(BaseWorker):
             self.finished.emit(False)
 
     def _get_unique_name(self, original_name: str, target_dir: str) -> str:
-        """Generate a unique name by appending _2, _3, etc., if the target exists."""
         base_name, ext = os.path.splitext(original_name)
         target_path = os.path.join(target_dir, original_name)
         if not os.path.exists(target_path):
@@ -787,6 +786,68 @@ class LogViewerDialog(QDialog):
         cursor.movePosition(cursor.MoveOperation.End)
         self.log_text.setTextCursor(cursor)
 
+class SettingsDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.settings = QSettings("Replitex Team", "Replitex")
+        self.init_ui()
+
+    def init_ui(self):
+        self.setWindowTitle("Настройки")
+        self.setModal(True)
+        self.resize(300, 200)
+        layout = QVBoxLayout(self)
+        theme_group = QGroupBox("Настройки Темы")
+        theme_layout = QVBoxLayout(theme_group)
+        
+        self.theme_button_group = QButtonGroup(self)
+        self.light_theme_radio = QRadioButton("Светлая тема")
+        self.dark_theme_radio = QRadioButton("Тёмная тема")
+        self.poisonous_purple_theme_radio = QRadioButton("Ядовитый пурпур")
+        self.midnight_gold_theme_radio = QRadioButton("Полночное золото")
+        self.theme_button_group.addButton(self.light_theme_radio)
+        self.theme_button_group.addButton(self.dark_theme_radio)
+        self.theme_button_group.addButton(self.poisonous_purple_theme_radio)
+        self.theme_button_group.addButton(self.midnight_gold_theme_radio)
+        
+        current_theme = self.settings.value("theme", "dark", type=str)
+        self.light_theme_radio.setChecked(current_theme == "light")
+        self.dark_theme_radio.setChecked(current_theme == "dark")
+        self.poisonous_purple_theme_radio.setChecked(current_theme == "poisonous_purple")
+        self.midnight_gold_theme_radio.setChecked(current_theme == "midnight_gold")
+        
+        self.light_theme_radio.toggled.connect(self.change_theme)
+        self.dark_theme_radio.toggled.connect(self.change_theme)
+        self.poisonous_purple_theme_radio.toggled.connect(self.change_theme)
+        self.midnight_gold_theme_radio.toggled.connect(self.change_theme)
+        
+        theme_layout.addWidget(self.light_theme_radio)
+        theme_layout.addWidget(self.dark_theme_radio)
+        theme_layout.addWidget(self.poisonous_purple_theme_radio)
+        theme_layout.addWidget(self.midnight_gold_theme_radio)
+        layout.addWidget(theme_group)
+        
+        close_btn = QPushButton("Закрыть")
+        close_btn.clicked.connect(self.accept)
+        layout.addWidget(close_btn)
+        layout.addStretch()
+
+    def change_theme(self):
+        if self.light_theme_radio.isChecked():
+            theme = "light"
+        elif self.dark_theme_radio.isChecked():
+            theme = "dark"
+        elif self.poisonous_purple_theme_radio.isChecked():
+            theme = "poisonous_purple"
+        elif self.midnight_gold_theme_radio.isChecked():
+            theme = "midnight_gold"
+        else:
+            theme = "dark"
+        parent = self.parent()
+        if parent:
+            parent.apply_qss_theme(theme)
+            self.settings.setValue("theme", theme)
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -794,7 +855,10 @@ class MainWindow(QMainWindow):
         self.worker = None
         self.worker_thread = None
         self.log_dialog = None
+        self.settings = QSettings("Replitex Team", "Replitex")
         self.init_ui()
+        theme = self.settings.value("theme", "dark", type=str)
+        self.apply_qss_theme(theme)
 
     def init_ui(self):
         self.setWindowTitle("Replitex")
@@ -813,6 +877,7 @@ class MainWindow(QMainWindow):
         main_layout.setSpacing(15)
         main_layout.setContentsMargins(20, 20, 20, 20)
         central_layout.addWidget(self.scroll_area)
+        
         folder_group = QGroupBox("Рабочая папка")
         folder_layout = QHBoxLayout(folder_group)
         self.folder_path_label = QLabel("Папка не выбрана")
@@ -866,21 +931,17 @@ class MainWindow(QMainWindow):
         ignore_paths_layout.addLayout(paths_controls_layout)
         main_layout.addWidget(ignore_paths_group)
         options_group = QGroupBox("Опции поиска")
-        options_layout = QVBoxLayout(options_group)
+        options_layout = QFormLayout(options_group)
         self.case_sensitive_cb = QCheckBox("Учитывать регистр")
-        options_layout.addWidget(self.case_sensitive_cb)
+        options_layout.addRow(self.case_sensitive_cb)
         self.whole_words_cb = QCheckBox("Только целые слова")
-        options_layout.addWidget(self.whole_words_cb)
+        options_layout.addRow(self.whole_words_cb)
         self.include_subfolders_cb = QCheckBox("Включить подпапки")
         self.include_subfolders_cb.setChecked(True)
-        options_layout.addWidget(self.include_subfolders_cb)
-        extensions_layout = QHBoxLayout()
-        extensions_layout.addWidget(QLabel("Полностью игнорировать расширения (через запятую):"))
-        extensions_layout.addStretch()
-        options_layout.addLayout(extensions_layout)
+        options_layout.addRow(self.include_subfolders_cb)
         self.ignored_extensions_input = QLineEdit()
         self.ignored_extensions_input.setPlaceholderText("Например: .png, .jpg, .bin")
-        options_layout.addWidget(self.ignored_extensions_input)
+        options_layout.addRow("Игнорировать расширения:", self.ignored_extensions_input)
         main_layout.addWidget(options_group)
         mode_group = QGroupBox("Режим обработки")
         mode_layout = QVBoxLayout(mode_group)
@@ -912,14 +973,500 @@ class MainWindow(QMainWindow):
         separator.setFrameShape(QFrame.Shape.HLine)
         separator.setFrameShadow(QFrame.Shadow.Sunken)
         main_layout.addWidget(separator)
+        status_layout = QHBoxLayout()
         self.status_label = QLabel("Готов к работе")
         self.status_label.setStyleSheet("padding: 5px; color: #00aa00;")
-        main_layout.addWidget(self.status_label)
+        status_layout.addWidget(self.status_label)
+        status_layout.addStretch()
+        self.settings_btn = QPushButton("⚙️")
+        self.settings_btn.setFixedSize(30, 30)
+        self.settings_btn.clicked.connect(self.show_settings)
+        status_layout.addWidget(self.settings_btn)
+        main_layout.addLayout(status_layout)
         self.replace_radio.toggled.connect(self.update_start_button)
         self.copy1_radio.toggled.connect(self.update_start_button)
         self.copy2_radio.toggled.connect(self.update_start_button)
         self.update_start_button()
         self._update_ui_state()
+
+    def apply_qss_theme(self, theme: str):
+        colors = self._get_theme_colors(theme)
+        style = self._generate_qss(colors)
+        QApplication.instance().setStyleSheet(style)
+        self.folder_path_label.setStyleSheet(f"color: {colors['label_text']}; font-style: italic;")
+        self.status_label.setStyleSheet(f"padding: 5px; color: {colors['status_success']};")
+
+    def _get_theme_colors(self, theme: str) -> Dict[str, str]:
+        if theme == "dark":
+            return {
+                'main_bg': '#2b2b2b',
+                'text_color': '#ffffff',
+                'group_border': '#555555',
+                'group_title': '#ffffff',
+                'button_bg': '#404040',
+                'button_border': '#606060',
+                'button_hover_bg': '#505050',
+                'button_hover_border': '#707070',
+                'button_pressed_bg': '#353535',
+                'button_pressed_border': '#808080',
+                'button_disabled_bg': '#2a2a2a',
+                'button_disabled_border': '#404040',
+                'button_disabled_text': '#666666',
+                'input_bg': '#3a3a3a',
+                'input_border': '#555555',
+                'input_focus_border': '#0078d4',
+                'input_disabled_bg': '#2a2a2a',
+                'input_disabled_text': '#666666',
+                'selection_bg': '#0078d4',
+                'checkbox_bg': '#3a3a3a',
+                'checkbox_border': '#555555',
+                'checkbox_checked_bg': '#0078d4',
+                'checkbox_checked_border': '#0078d4',
+                'checkbox_hover_border': '#999999',
+                'checkbox_disabled_bg': '#2a2a2a',
+                'checkbox_disabled_border': '#404040',
+                'checkbox_disabled_text': '#666666',
+                'label_text': '#ffffff',
+                'text_edit_bg': '#3a3a3a',
+                'text_edit_border': '#555555',
+                'tree_bg': '#3a3a3a',
+                'tree_border': '#555555',
+                'tree_alternate_bg': '#404040',
+                'tree_item_selected_bg': '#0078d4',
+                'tree_item_hover_bg': '#505050',
+                'header_bg': '#404040',
+                'header_border': '#555555',
+                'frame_line': '#555555',
+                'msgbox_bg': '#2b2b2b',
+                'scroll_bg': '#2b2b2b',
+                'scroll_handle_bg': '#555555',
+                'scroll_handle_hover_bg': '#666666',
+                'scroll_handle_pressed_bg': '#777777',
+                'radio_bg': '#3a3a3a',
+                'radio_border': '#555555',
+                'radio_checked_bg': '#0078d4',
+                'radio_checked_border': '#0078d4',
+                'radio_hover_border': '#707070',
+                'status_success': '#00aa00',
+                'status_error': '#ff6666'
+            }
+        elif theme == "light":
+            return {
+                'main_bg': '#f5f5f5',
+                'text_color': '#333333',
+                'group_border': '#cccccc',
+                'group_title': '#333333',
+                'button_bg': '#e0e0e0',
+                'button_border': '#aaaaaa',
+                'button_hover_bg': '#d0d0d0',
+                'button_hover_border': '#999999',
+                'button_pressed_bg': '#c0c0c0',
+                'button_pressed_border': '#888888',
+                'button_disabled_bg': '#e0e0e0',
+                'button_disabled_border': '#cccccc',
+                'button_disabled_text': '#999999',
+                'input_bg': '#ffffff',
+                'input_border': '#cccccc',
+                'input_focus_border': '#3399ff',
+                'input_disabled_bg': '#f0f0f0',
+                'input_disabled_text': '#999999',
+                'selection_bg': '#3399ff',
+                'checkbox_bg': '#ffffff',
+                'checkbox_border': '#cccccc',
+                'checkbox_checked_bg': '#3399ff',
+                'checkbox_checked_border': '#3399ff',
+                'checkbox_hover_border': '#999999',
+                'checkbox_disabled_bg': '#e0e0e0',
+                'checkbox_disabled_border': '#cccccc',
+                'checkbox_disabled_text': '#999999',
+                'label_text': '#333333',
+                'text_edit_bg': '#ffffff',
+                'text_edit_border': '#cccccc',
+                'tree_bg': '#ffffff',
+                'tree_border': '#cccccc',
+                'tree_alternate_bg': '#f0f0f0',
+                'tree_item_selected_bg': '#3399ff',
+                'tree_item_hover_bg': '#e0e0e0',
+                'header_bg': '#e0e0e0',
+                'header_border': '#cccccc',
+                'frame_line': '#cccccc',
+                'msgbox_bg': '#f5f5f5',
+                'scroll_bg': '#f5f5f5',
+                'scroll_handle_bg': '#cccccc',
+                'scroll_handle_hover_bg': '#bbbbbb',
+                'scroll_handle_pressed_bg': '#aaaaaa',
+                'radio_bg': '#ffffff',
+                'radio_border': '#cccccc',
+                'radio_checked_bg': '#3399ff',
+                'radio_checked_border': '#3399ff',
+                'radio_hover_border': '#999999',
+                'status_success': '#00aa00',
+                'status_error': '#ff6666'
+            }
+        elif theme == "poisonous_purple":
+            return {
+                'main_bg': '#592563',
+                'text_color': '#ffffff',
+                'group_border': '#b049c4',
+                'group_title': '#a4db59',
+                'button_bg': '#000000',
+                'button_border': '#c753dd',
+                'button_hover_bg': '#a645b8',
+                'button_hover_border': '#e860ff',
+                'button_pressed_bg': '#6e2e7a',
+                'button_pressed_border': '#ff6eff',
+                'button_disabled_bg': '#572461',
+                'button_disabled_border': '#843793',
+                'button_disabled_text': '#d358eb',
+                'input_bg': '#783286',
+                'input_border': '#b049c4',
+                'input_focus_border': '#a4db59',
+                'input_disabled_bg': '#572461',
+                'input_disabled_text': '#d358eb',
+                'selection_bg': '#a4db59',
+                'checkbox_bg': '#783286',
+                'checkbox_border': '#b049c4',
+                'checkbox_checked_bg': '#a4db59',
+                'checkbox_checked_border': '#a4db59',
+                'checkbox_hover_border': '#ff84ff',
+                'checkbox_disabled_bg': '#572461',
+                'checkbox_disabled_border': '#843793',
+                'checkbox_disabled_text': '#d358eb',
+                'label_text': '#ffffff',
+                'text_edit_bg': '#783286',
+                'text_edit_border': '#b049c4',
+                'tree_bg': '#783286',
+                'tree_border': '#b049c4',
+                'tree_alternate_bg': '#843793',
+                'tree_item_selected_bg': '#a4db59',
+                'tree_item_hover_bg': '#a645b8',
+                'header_bg': '#843793',
+                'header_border': '#b049c4',
+                'frame_line': '#b049c4',
+                'msgbox_bg': '#592563',
+                'scroll_bg': '#592563',
+                'scroll_handle_bg': '#b049c4',
+                'scroll_handle_hover_bg': '#d358eb',
+                'scroll_handle_pressed_bg': '#f666ff',
+                'radio_bg': '#783286',
+                'radio_border': '#b049c4',
+                'radio_checked_bg': '#a4db59',
+                'radio_checked_border': '#a4db59',
+                'radio_hover_border': '#e860ff',
+                'status_success': '#00aa00',
+                'status_error': '#ff6666'
+            }
+        elif theme == "midnight_gold":
+            return {
+                'main_bg': '#1a1f3a',
+                'text_color': '#ffffff',
+                'group_border': '#4a5a8a',
+                'group_title': '#ffd700',
+                'button_bg': '#2c3a6b',
+                'button_border': '#4a5a8a',
+                'button_hover_bg': '#3d4b7c',
+                'button_hover_border': '#5a6a9a',
+                'button_pressed_bg': '#1f2d5e',
+                'button_pressed_border': '#6a7aaa',
+                'button_disabled_bg': '#141829',
+                'button_disabled_border': '#2c3a6b',
+                'button_disabled_text': '#5a6a9a',
+                'input_bg': '#243456',
+                'input_border': '#4a5a8a',
+                'input_focus_border': '#ffd700',
+                'input_disabled_bg': '#141829',
+                'input_disabled_text': '#5a6a9a',
+                'selection_bg': '#ffd700',
+                'checkbox_bg': '#243456',
+                'checkbox_border': '#4a5a8a',
+                'checkbox_checked_bg': '#ffd700',
+                'checkbox_checked_border': '#ffed4a',
+                'checkbox_hover_border': '#8a9aca',
+                'checkbox_disabled_bg': '#141829',
+                'checkbox_disabled_border': '#2c3a6b',
+                'checkbox_disabled_text': '#5a6a9a',
+                'label_text': '#ffffff',
+                'text_edit_bg': '#243456',
+                'text_edit_border': '#4a5a8a',
+                'tree_bg': '#243456',
+                'tree_border': '#4a5a8a',
+                'tree_alternate_bg': '#2c3a6b',
+                'tree_item_selected_bg': '#ffd700',
+                'tree_item_hover_bg': '#3d4b7c',
+                'header_bg': '#2c3a6b',
+                'header_border': '#4a5a8a',
+                'frame_line': '#4a5a8a',
+                'msgbox_bg': '#1a1f3a',
+                'scroll_bg': '#1a1f3a',
+                'scroll_handle_bg': '#4a5a8a',
+                'scroll_handle_hover_bg': '#5a6a9a',
+                'scroll_handle_pressed_bg': '#6a7aaa',
+                'radio_bg': '#243456',
+                'radio_border': '#4a5a8a',
+                'radio_checked_bg': '#ffd700',
+                'radio_checked_border': '#ffed4a',
+                'radio_hover_border': '#5a6a9a',
+                'status_success': '#00ff88',
+                'status_error': '#ff4466'
+            }
+        else:
+            return self._get_theme_colors("dark")
+
+    def _generate_qss(self, colors: Dict[str, str]) -> str:
+        return f"""
+            QMainWindow, QDialog, QWidget {{
+                background-color: {colors['main_bg']};
+                color: {colors['text_color']};
+                font-family: 'Segoe UI', Arial, sans-serif;
+                font-size: 9pt;
+            }}
+            QGroupBox {{
+                font-weight: bold;
+                border: 2px solid {colors['group_border']};
+                border-radius: 8px;
+                margin-top: 1ex;
+                padding-top: 10px;
+            }}
+            QGroupBox::title {{
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 10px 0 10px;
+                color: {colors['group_title']};
+            }}
+            QPushButton {{
+                background-color: {colors['button_bg']};
+                border: 1px solid {colors['button_border']};
+                border-radius: 8px;
+                padding: 8px 16px;
+                font-weight: bold;
+                min-width: 80px;
+            }}
+            QPushButton:hover {{
+                background-color: {colors['button_hover_bg']};
+                border-color: {colors['button_hover_border']};
+            }}
+            QPushButton:pressed {{
+                background-color: {colors['button_pressed_bg']};
+                border-color: {colors['button_pressed_border']};
+            }}
+            QPushButton:disabled {{
+                background-color: {colors['button_disabled_bg']};
+                border-color: {colors['button_disabled_border']};
+                color: {colors['button_disabled_text']};
+            }}
+            QPushButton#settings_btn {{
+                background-color: {colors['button_bg']};
+                border: 1px solid {colors['button_border']};
+                border-radius: 15px;
+                font-size: 16pt;
+                padding: 0;
+                min-width: 30px;
+                max-width: 30px;
+                min-height: 30px;
+                max-height: 30px;
+            }}
+            QPushButton#settings_btn:hover {{
+                background-color: {colors['button_hover_bg']};
+                border-color: {colors['button_hover_border']};
+            }}
+            QPushButton#settings_btn:pressed {{
+                background-color: {colors['button_pressed_bg']};
+                border-color: {colors['button_pressed_border']};
+            }}
+            QLineEdit {{
+                background-color: {colors['input_bg']};
+                border: 1px solid {colors['input_border']};
+                border-radius: 4px;
+                padding: 6px;
+                selection-background-color: {colors['selection_bg']};
+            }}
+            QLineEdit:focus {{
+                border-color: {colors['input_focus_border']};
+            }}
+            QLineEdit:disabled {{
+                background-color: {colors['input_disabled_bg']};
+                color: {colors['input_disabled_text']};
+            }}
+            QCheckBox {{
+                spacing: 8px;
+            }}
+            QCheckBox::indicator {{
+                width: 16px;
+                height: 16px;
+                border: 1px solid {colors['checkbox_border']};
+                background-color: {colors['checkbox_bg']};
+                border-radius: 2px;
+            }}
+            QCheckBox::indicator:checked {{
+                background-color: {colors['checkbox_checked_bg']};
+                border-color: {colors['checkbox_checked_border']};
+                image: url(:/check.png);
+            }}
+            QCheckBox::indicator:hover {{
+                border-color: {colors['checkbox_hover_border']};
+            }}
+            QCheckBox:disabled {{
+                color: {colors['checkbox_disabled_text']};
+            }}
+            QCheckBox::indicator:disabled {{
+                background-color: {colors['checkbox_disabled_bg']};
+                border-color: {colors['checkbox_disabled_border']};
+            }}
+            QCheckBox#theme_toggle::indicator {{
+                width: 40px;
+                height: 20px;
+                border-radius: 10px;
+                background-color: {colors['checkbox_border']};
+                border: 1px solid {colors['checkbox_hover_border']};
+            }}
+            QCheckBox#theme_toggle::indicator:checked {{
+                background-color: {colors['checkbox_checked_bg']};
+                border: 1px solid {colors['checkbox_checked_border']};
+            }}
+            QCheckBox#theme_toggle::indicator::subcontrol {{
+                width: 16px;
+                height: 16px;
+                border-radius: 8px;
+                background-color: {colors['text_color']};
+                border: 1px solid {colors['checkbox_border']};
+                subcontrol-origin: padding;
+                subcontrol-position: right center;
+                padding-right: 3px;
+                padding-top: 2px;
+            }}
+            QCheckBox#theme_toggle::indicator:checked::subcontrol {{
+                padding-right: 21px;
+                padding-left: 3px;
+            }}
+            QCheckBox#theme_toggle::indicator:hover {{
+                border-color: {colors['checkbox_hover_border']};
+            }}
+            QCheckBox#theme_toggle::indicator:disabled {{
+                background-color: {colors['checkbox_disabled_bg']};
+                border-color: {colors['checkbox_disabled_border']};
+            }}
+            QLabel {{
+                color: {colors['label_text']};
+            }}
+            QTextEdit {{
+                background-color: {colors['text_edit_bg']};
+                border: 1px solid {colors['text_edit_border']};
+                border-radius: 4px;
+                selection-background-color: {colors['selection_bg']};
+                font-family: 'Consolas', 'Courier New', monospace;
+            }}
+            QTreeWidget {{
+                background-color: {colors['tree_bg']};
+                border: 1px solid {colors['tree_border']};
+                border-radius: 4px;
+                selection-background-color: {colors['tree_item_selected_bg']};
+                alternate-background-color: {colors['tree_alternate_bg']};
+            }}
+            QTreeWidget::item {{
+                padding: 4px;
+                border: none;
+            }}
+            QTreeWidget::item:selected {{
+                background-color: {colors['tree_item_selected_bg']};
+            }}
+            QTreeWidget::item:hover {{
+                background-color: {colors['tree_item_hover_bg']};
+            }}
+            QHeaderView::section {{
+                background-color: {colors['header_bg']};
+                border: 1px solid {colors['header_border']};
+                padding: 6px;
+                font-weight: bold;
+            }}
+            QFrame[frameShape="4"] {{
+                border: none;
+                border-top: 1px solid {colors['frame_line']};
+            }}
+            QMessageBox {{
+                background-color: {colors['msgbox_bg']};
+            }}
+            QMessageBox QPushButton {{
+                min-width: 60px;
+                padding: 6px 12px;
+            }}
+            QScrollArea {{
+                background-color: {colors['scroll_bg']};
+                border: none;
+            }}
+            QScrollBar:vertical {{
+                background-color: {colors['scroll_bg']};
+                width: 12px;
+                border-radius: 6px;
+                margin: 0;
+            }}
+            QScrollBar::handle:vertical {{
+                background-color: {colors['scroll_handle_bg']};
+                border-radius: 6px;
+                min-height: 20px;
+                margin: 2px;
+            }}
+            QScrollBar::handle:vertical:hover {{
+                background-color: {colors['scroll_handle_hover_bg']};
+            }}
+            QScrollBar::handle:vertical:pressed {{
+                background-color: {colors['scroll_handle_pressed_bg']};
+            }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                border: none;
+                background: none;
+                height: 0px;
+            }}
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
+                background: none;
+            }}
+            QScrollBar:horizontal {{
+                background-color: {colors['scroll_bg']};
+                height: 12px;
+                border-radius: 6px;
+                margin: 0;
+            }}
+            QScrollBar::handle:horizontal {{
+                background-color: {colors['scroll_handle_bg']};
+                border-radius: 6px;
+                min-width: 20px;
+                margin: 2px;
+            }}
+            QScrollBar::handle:horizontal:hover {{
+                background-color: {colors['scroll_handle_hover_bg']};
+            }}
+            QScrollBar::handle:horizontal:pressed {{
+                background-color: {colors['scroll_handle_pressed_bg']};
+            }}
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
+                border: none;
+                background: none;
+                width: 0px;
+            }}
+            QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {{
+                background: none;
+            }}
+            QRadioButton {{
+                spacing: 8px;
+            }}
+            QRadioButton::indicator {{
+                width: 16px;
+                height: 16px;
+                border-radius: 8px;
+                border: 1px solid {colors['radio_border']};
+                background-color: {colors['radio_bg']};
+            }}
+            QRadioButton::indicator:checked {{
+                background-color: {colors['radio_checked_bg']};
+                border-color: {colors['radio_checked_border']};
+            }}
+            QRadioButton::indicator:hover {{
+                border-color: {colors['radio_hover_border']};
+            }}
+            """
+
+    def show_settings(self):
+        dialog = SettingsDialog(self)
+        dialog.exec()
 
     def update_start_button(self):
         if self.replace_radio.isChecked():
@@ -938,7 +1485,9 @@ class MainWindow(QMainWindow):
         if folder:
             self.folder_path = folder
             self.folder_path_label.setText(folder)
-            self.folder_path_label.setStyleSheet("color: #ffffff;")
+            theme = self.settings.value("theme", "dark", type=str)
+            colors = self._get_theme_colors(theme)
+            self.folder_path_label.setStyleSheet(f"color: {colors['label_text']};")
             self._update_ui_state()
 
     def _update_ui_state(self):
@@ -1105,6 +1654,7 @@ class MainWindow(QMainWindow):
         return True
 
     def _disable_ui(self):
+        self.settings_btn.setEnabled(False)
         self.select_folder_btn.setEnabled(False)
         self.preview_btn.setEnabled(False)
         self.start_btn.setEnabled(False)
@@ -1123,6 +1673,7 @@ class MainWindow(QMainWindow):
         self.copy2_radio.setEnabled(False)
 
     def _enable_ui(self):
+        self.settings_btn.setEnabled(True)
         self.select_folder_btn.setEnabled(True)
         self.find_input.setEnabled(True)
         self.replace_input.setEnabled(True)
@@ -1161,14 +1712,16 @@ class MainWindow(QMainWindow):
             self.worker_thread = None
         self.worker = None
         self._enable_ui()
+        theme = self.settings.value("theme", "dark", type=str)
+        colors = self._get_theme_colors(theme)
         if success:
             self.status_label.setText("Операция завершена успешно")
-            self.status_label.setStyleSheet("padding: 5px; color: #00aa00;")
+            self.status_label.setStyleSheet(f"padding: 5px; color: {colors['status_success']};")
         else:
             self.status_label.setText("Операция завершена с ошибками")
-            self.status_label.setStyleSheet("padding: 5px; color: #ff6666;")
+            self.status_label.setStyleSheet(f"padding: 5px; color: {colors['status_error']};")
         QTimer.singleShot(5000, lambda: self.status_label.setText("Готов к работе"))
-        QTimer.singleShot(5000, lambda: self.status_label.setStyleSheet("padding: 5px; color: #00aa00;"))
+        QTimer.singleShot(5000, lambda: self.status_label.setStyleSheet(f"padding: 5px; color: {colors['status_success']};"))
 
     def closeEvent(self, event):
         if self.worker_thread and self.worker_thread.isRunning():
@@ -1191,213 +1744,11 @@ class MainWindow(QMainWindow):
         else:
             event.accept()
 
-def apply_dark_theme(app: QApplication):
-    dark_style = """
-    QMainWindow, QDialog, QWidget {
-        background-color: #2b2b2b;
-        color: #ffffff;
-        font-family: 'Segoe UI', Arial, sans-serif;
-        font-size: 9pt;
-    }
-    QGroupBox {
-        font-weight: bold;
-        border: 2px solid #555555;
-        border-radius: 8px;
-        margin-top: 1ex;
-        padding-top: 10px;
-    }
-    QGroupBox::title {
-        subcontrol-origin: margin;
-        left: 10px;
-        padding: 0 10px 0 10px;
-        color: #ffffff;
-    }
-    QPushButton {
-        background-color: #404040;
-        border: 1px solid #606060;
-        border-radius: 8px;
-        padding: 8px 16px;
-        font-weight: bold;
-        min-width: 80px;
-    }
-    QPushButton:hover {
-        background-color: #505050;
-        border-color: #707070;
-    }
-    QPushButton:pressed {
-        background-color: #353535;
-        border-color: #808080;
-    }
-    QPushButton:disabled {
-        background-color: #2a2a2a;
-        border-color: #404040;
-        color: #666666;
-    }
-    QLineEdit {
-        background-color: #3a3a3a;
-        border: 1px solid #555555;
-        border-radius: 4px;
-        padding: 6px;
-        selection-background-color: #0078d4;
-    }
-    QLineEdit:focus {
-        border-color: #0078d4;
-    }
-    QLineEdit:disabled {
-        background-color: #2a2a2a;
-        color: #666666;
-    }
-    QCheckBox {
-        spacing: 8px;
-    }
-    QCheckBox::indicator {
-        width: 16px;
-        height: 16px;
-        border-radius: 3px;
-        border: 1px solid #555555;
-        background-color: #3a3a3a;
-    }
-    QCheckBox::indicator:checked {
-        background-color: #0078d4;
-        border-color: #0078d4;
-        image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHZpZXdCb3g9IjAgMCAxMiAxMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEwIDNMNC41IDguNUwyIDYiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=);
-    }
-    QCheckBox::indicator:hover {
-        border-color: #707070;
-    }
-    QCheckBox:disabled {
-        color: #666666;
-    }
-    QCheckBox::indicator:disabled {
-        background-color: #2a2a2a;
-        border-color: #404040;
-    }
-    QLabel {
-        color: #ffffff;
-    }
-    QTextEdit {
-        background-color: #3a3a3a;
-        border: 1px solid #555555;
-        border-radius: 4px;
-        selection-background-color: #0078d4;
-        font-family: 'Consolas', 'Courier New', monospace;
-    }
-    QTreeWidget {
-        background-color: #3a3a3a;
-        border: 1px solid #555555;
-        border-radius: 4px;
-        selection-background-color: #0078d4;
-        alternate-background-color: #404040;
-    }
-    QTreeWidget::item {
-        padding: 4px;
-        border: none;
-    }
-    QTreeWidget::item:selected {
-        background-color: #0078d4;
-    }
-    QTreeWidget::item:hover {
-        background-color: #505050;
-    }
-    QHeaderView::section {
-        background-color: #404040;
-        border: 1px solid #555555;
-        padding: 6px;
-        font-weight: bold;
-    }
-    QFrame[frameShape="4"] {
-        border: none;
-        border-top: 1px solid #555555;
-    }
-    QMessageBox {
-        background-color: #2b2b2b;
-    }
-    QMessageBox QPushButton {
-        min-width: 60px;
-        padding: 6px 12px;
-    }
-    QScrollArea {
-        background-color: #2b2b2b;
-        border: none;
-    }
-    QScrollBar:vertical {
-        background-color: #2b2b2b;
-        width: 12px;
-        border-radius: 6px;
-        margin: 0;
-    }
-    QScrollBar::handle:vertical {
-        background-color: #555555;
-        border-radius: 6px;
-        min-height: 20px;
-        margin: 2px;
-    }
-    QScrollBar::handle:vertical:hover {
-        background-color: #666666;
-    }
-    QScrollBar::handle:vertical:pressed {
-        background-color: #777777;
-    }
-    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-        border: none;
-        background: none;
-        height: 0px;
-    }
-    QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
-        background: none;
-    }
-    QScrollBar:horizontal {
-        background-color: #2b2b2b;
-        height: 12px;
-        border-radius: 6px;
-        margin: 0;
-    }
-    QScrollBar::handle:horizontal {
-        background-color: #555555;
-        border-radius: 6px;
-        min-width: 20px;
-        margin: 2px;
-    }
-    QScrollBar::handle:horizontal:hover {
-        background-color: #666666;
-    }
-    QScrollBar::handle:horizontal:pressed {
-        background-color: #777777;
-    }
-    QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
-        border: none;
-        background: none;
-        width: 0px;
-    }
-    QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
-        background: none;
-    }
-    QRadioButton {
-        spacing: 8px;
-    }
-    QRadioButton::indicator {
-        width: 16px;
-        height: 16px;
-        border-radius: 8px;
-        border: 1px solid #555555;
-        background-color: #3a3a3a;
-    }
-    QRadioButton::indicator:checked {
-        background-color: #0078d4;
-        border-color: #0078d4;
-    }
-    QRadioButton::indicator:hover {
-        border-color: #707070;
-    }
-    """
-    app.setStyleSheet(dark_style)
-
 def main():
     app = QApplication(sys.argv)
     app.setApplicationName("Replitex")
-    app.setApplicationVersion("1.0")
+    app.setApplicationVersion("2.1")
     app.setOrganizationName("Replitex Team")
-    apply_dark_theme(app)
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
