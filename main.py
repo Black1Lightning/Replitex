@@ -18,6 +18,125 @@ from PyQt6.QtGui import QFont
 
 from collections import defaultdict
 
+LANGUAGES = {
+    'window_title': {'ru': 'Replitex', 'en': 'Replitex'},
+    'folder_group': {'ru': 'Рабочая папка', 'en': 'Working Folder'},
+    'folder_not_selected': {'ru': 'Папка не выбрана', 'en': 'Folder not selected'},
+    'select_folder_btn': {'ru': 'Выбрать папку', 'en': 'Select Folder'},
+    'replace_group': {'ru': 'Параметры замены', 'en': 'Replacement Parameters'},
+    'find_label': {'ru': 'Найти:', 'en': 'Find:'},
+    'find_placeholder': {'ru': 'Введите текст для поиска...', 'en': 'Enter text to find...'},
+    'replace_label': {'ru': 'Заменить на:', 'en': 'Replace with:'},
+    'replace_placeholder': {'ru': 'Введите текст для замены...', 'en': 'Enter replacement text...'},
+    'ignored_words_group': {'ru': 'Игнорируемые слова', 'en': 'Ignored Words'},
+    'ignored_words_info': {'ru': 'Если в пути файла/папки или содержимом есть эти слова - объект будет полностью проигнорирован:', 'en': 'If these words are in the file/folder path or content - the object will be completely ignored:'},
+    'ignored_words_placeholder': {'ru': 'Введите слова через запятую: temp, cache, backup', 'en': 'Enter words separated by comma: temp, cache, backup'},
+    'ignore_paths_group': {'ru': 'Игнорируемые пути', 'en': 'Ignored Paths'},
+    'ignore_paths_info': {'ru': 'Папки и файлы, которые будут полностью проигнорированы:', 'en': 'Folders and files that will be completely ignored:'},
+    'ignored_paths_headers': {'ru': ['Путь', 'Тип'], 'en': ['Path', 'Type']},
+    'add_folder_btn': {'ru': 'Добавить папку', 'en': 'Add Folder'},
+    'add_file_btn': {'ru': 'Добавить файл', 'en': 'Add File'},
+    'remove_path_btn': {'ru': 'Удалить', 'en': 'Remove'},
+    'options_group': {'ru': 'Опции поиска', 'en': 'Search Options'},
+    'case_sensitive_cb': {'ru': 'Учитывать регистр', 'en': 'Case Sensitive'},
+    'whole_words_cb': {'ru': 'Только целые слова', 'en': 'Whole Words Only'},
+    'include_subfolders_cb': {'ru': 'Включить подпапки', 'en': 'Include Subfolders'},
+    'ignored_extensions_label': {'ru': 'Игнорировать расширения:', 'en': 'Ignore Extensions:'},
+    'ignored_extensions_placeholder': {'ru': 'Например: .png, .jpg, .bin', 'en': 'For example: .png, .jpg, .bin'},
+    'mode_group': {'ru': 'Режим обработки', 'en': 'Processing Mode'},
+    'replace_radio': {'ru': 'Замена', 'en': 'Replace'},
+    'copy1_radio': {'ru': 'Копирование 1', 'en': 'Copy 1'},
+    'copy2_radio': {'ru': 'Копирование 2', 'en': 'Copy 2'},
+    'preview_btn': {'ru': 'Предпросмотр', 'en': 'Preview'},
+    'start_replace_btn': {'ru': 'Начать замену', 'en': 'Start Replacement'},
+    'start_copy1_btn': {'ru': 'Начать копирование 1', 'en': 'Start Copy 1'},
+    'start_copy2_btn': {'ru': 'Начать копирование 2', 'en': 'Start Copy 2'},
+    'logs_btn': {'ru': 'Показать логи', 'en': 'Show Logs'},
+    'status_ready': {'ru': 'Готов к работе', 'en': 'Ready'},
+    'settings_title': {'ru': 'Настройки', 'en': 'Settings'},
+    'theme_group': {'ru': 'Настройки Темы', 'en': 'Theme Settings'},
+    'light_theme': {'ru': 'Светлая тема', 'en': 'Light Theme'},
+    'dark_theme': {'ru': 'Тёмная тема', 'en': 'Dark Theme'},
+    'poisonous_purple_theme': {'ru': 'Ядовитый пурпур', 'en': 'Poisonous Purple'},
+    'midnight_gold_theme': {'ru': 'Полночное золото', 'en': 'Midnight Gold'},
+    'language_group': {'ru': 'Настройки языка', 'en': 'Language Settings'},
+    'ru_radio': {'ru': 'Русский', 'en': 'Русский'},
+    'en_radio': {'ru': 'English', 'en': 'English'},
+    'close_btn': {'ru': 'Закрыть', 'en': 'Close'},
+    'preview_title': {'ru': 'Предпросмотр совпадений', 'en': 'Preview Matches'},
+    'found_matches': {'ru': 'Найдено совпадений:', 'en': 'Found matches:'},
+    'tree_headers': {'ru': ['Элемент', 'Тип', 'Изменения'], 'en': ['Item', 'Type', 'Changes']},
+    'name_change': {'ru': 'Переименование', 'en': 'Renaming'},
+    'content_change': {'ru': 'Изменение содержимого', 'en': 'Content Change'},
+    'found_in_content': {'ru': 'Найдено совпадений:', 'en': 'Found matches:'},
+    'line': {'ru': 'Строка', 'en': 'Line'},
+    'created_rename': {'ru': 'Создано с переименованием', 'en': 'Created with Renaming'},
+    'created': {'ru': 'Создано', 'en': 'Created'},
+    'created_content': {'ru': 'Создано для замены содержимого', 'en': 'Created for Content Replacement'},
+    'folder_type': {'ru': 'Папка', 'en': 'Folder'},
+    'file_type': {'ru': 'Файл', 'en': 'File'},
+    'copied_no_rename': {'ru': 'Скопировано без переименования', 'en': 'Copied without renaming'},
+    'log_title': {'ru': 'Логи операций', 'en': 'Operation Logs'},
+    'clear_logs_btn': {'ru': 'Очистить логи', 'en': 'Clear Logs'},
+    'logs_empty': {'ru': 'Логи пусты', 'en': 'Logs are empty'},
+    'error_title': {'ru': 'Ошибка', 'en': 'Error'},
+    'info_title': {'ru': 'Информация', 'en': 'Information'},
+    'confirm_title': {'ru': 'Подтверждение', 'en': 'Confirmation'},
+    'select_folder_msg': {'ru': 'Пожалуйста, выберите рабочую папку.', 'en': 'Please select a working folder.'},
+    'enter_find_text_msg': {'ru': 'Пожалуйста, введите текст для поиска.', 'en': 'Please enter text to find.'},
+    'folder_not_exist_msg': {'ru': 'Выбранная папка не существует.', 'en': 'The selected folder does not exist.'},
+    'confirm_start': {'ru': 'Вы уверены, что хотите начать операцию? Это действие нельзя отменить!', 'en': 'Are you sure you want to start the operation? This action cannot be undone!'},
+    'confirm_close': {'ru': 'Операция всё ещё выполняется. Вы уверены, что хотите закрыть приложение?', 'en': 'The operation is still running. Are you sure you want to close the application?'},
+    'path_already_added_folder': {'ru': 'Эта папка уже добавлена в список.', 'en': 'This folder is already added to the list.'},
+    'path_already_added_file': {'ru': 'Этот файл уже добавлен в список.', 'en': 'This file is already added to the list.'},
+    'confirm_remove': {'ru': 'Удалить из списка игнорируемых:\n{path}?', 'en': 'Remove from ignored list:\n{path}?'},
+    'preview_no_matches': {'ru': 'Совпадений не найдено.', 'en': 'No matches found.'},
+    'select_working_folder': {'ru': 'Выберите рабочую папку', 'en': 'Select working folder'},
+    'select_ignore_folder': {'ru': 'Выберите папку для игнорирования', 'en': 'Select folder to ignore'},
+    'select_ignore_file': {'ru': 'Выберите файл для игнорирования', 'en': 'Select file to ignore'},
+    'all_files': {'ru': 'Все файлы (*.*)', 'en': 'All files (*.*)'},
+    'creating_preview': {'ru': 'Создание предпросмотра...', 'en': 'Creating preview...'},
+    'starting_operation': {'ru': 'Начинаю операцию...', 'en': 'Starting operation...'},
+    'operation_success': {'ru': 'Операция завершена успешно', 'en': 'Operation completed successfully'},
+    'operation_error': {'ru': 'Операция завершена с ошибками', 'en': 'Operation completed with errors'},
+    'scanning_folder_preview': {'ru': 'Сканирование папки для предпросмотра...', 'en': 'Scanning folder for preview...'},
+    'simulating_copy2': {'ru': 'Симуляция копирования 2...', 'en': 'Simulating copy 2...'},
+    'checking_item': {'ru': 'Проверка {i} из {total}...', 'en': 'Checking {i} of {total}...'},
+    'preview_completed': {'ru': 'Предпросмотр завершён', 'en': 'Preview completed'},
+    'preview_error': {'ru': 'Ошибка при создании предпросмотра: {error}', 'en': 'Error creating preview: {error}'},
+    'starting_replacement': {'ru': 'Начинаю замену...', 'en': 'Starting replacement...'},
+    'processing_file': {'ru': 'Обработка файла {i} из {total}...', 'en': 'Processing file {i} of {total}...'},
+    'renaming_item': {'ru': 'Переименование {i} из {total}...', 'en': 'Renaming {i} of {total}...'},
+    'replacement_completed': {'ru': 'Замена завершена. Обработано объектов: {count}', 'en': 'Replacement completed. Processed items: {count}'},
+    'replacement_error': {'ru': 'Ошибка при выполнении замены: {error}', 'en': 'Error during replacement: {error}'},
+    'starting_copy1': {'ru': 'Начинаю копирование 1...', 'en': 'Starting copy 1...'},
+    'processing_item': {'ru': 'Обработка {i} из {total}...', 'en': 'Processing {i} of {total}...'},
+    'file_copied_content': {'ru': 'Файл скопирован для замены содержимого: {target} из {source}', 'en': 'File copied for content replacement: {target} from {source}'},
+    'copy1_completed': {'ru': 'Копирование 1 завершено. Создано объектов: {count}', 'en': 'Copy 1 completed. Created items: {count}'},
+    'copy1_error': {'ru': 'Ошибка при копировании 1: {error}', 'en': 'Error during copy 1: {error}'},
+    'rename_impossible': {'ru': 'Переименование невозможно - уже существует: {target}', 'en': 'Renaming impossible - already exists: {target}'},
+    'file_copied': {'ru': 'Файл скопирован: {target}', 'en': 'File copied: {target}'},
+    'renamed_from': {'ru': ' (переименован из {name})', 'en': ' (renamed from {name})'},
+    'content_changed': {'ru': ' (содержимое изменено)', 'en': ' (content changed)'},
+    'folder_copied': {'ru': 'Папка скопирована: {target}', 'en': 'Folder copied: {target}'},
+    'folder_renamed_from': {'ru': ' (переименована из {name})', 'en': ' (renamed from {name})'},
+    'copy_error': {'ru': 'Ошибка при копировании {source}: {error}', 'en': 'Error copying {source}: {error}'},
+    'starting_copy2': {'ru': 'Начинаю копирование 2...', 'en': 'Starting copy 2...'},
+    'already_exists': {'ru': 'Уже существует: {path}', 'en': 'Already exists: {path}'},
+    'file_copied_renamed': {'ru': 'Файл скопирован: {path} (переименован из {name})', 'en': 'File copied: {path} (renamed from {name})'},
+    'replacements_made': {'ru': ' - выполнено замен: {count}', 'en': ' - replacements made: {count}'},
+    'folder_copied_renamed': {'ru': 'Папка скопирована: {path} (переименована из {name})', 'en': 'Folder copied: {path} (renamed from {name})'},
+    'file_copied_content_replace': {'ru': 'Файл скопирован для замены содержимого: {path} (из {name})', 'en': 'File copied for content replacement: {path} (from {name})'},
+    'copy2_completed': {'ru': 'Копирование 2 завершено.', 'en': 'Copy 2 completed.'},
+    'copy2_error': {'ru': 'Ошибка при копировании 2: {error}', 'en': 'Error during copy 2: {error}'},
+    'no_access_folder': {'ru': 'Нет доступа к папке: {path}', 'en': 'No access to folder: {path}'},
+    'file_replacements': {'ru': 'Файл: {path} - выполнено замен: {count}', 'en': 'File: {path} - replacements made: {count}'},
+    'rename_impossible_exists': {'ru': 'Переименование невозможно - уже существует: {path}', 'en': 'Renaming impossible - already exists: {path}'},
+    'item_renamed': {'ru': '{type}: {old} → {new}', 'en': '{type}: {old} → {new}'},
+    'rename_error': {'ru': 'Ошибка при переименовании {path}: {error}', 'en': 'Error renaming {path}: {error}'},
+    'critical_error': {'ru': 'Критическая ошибка: {error}', 'en': 'Critical error: {error}'}
+}
+
 class BaseWorker(QObject):
     status_updated = pyqtSignal(str)
     log_message = pyqtSignal(str)
@@ -47,11 +166,15 @@ class FileProcessorWorker(BaseWorker):
         self.ignored_extensions = []
         self.is_preview_mode = False
         self.mode = 'replace'
+        self.lang = "ru"
+
+    def tr(self, key):
+        return LANGUAGES[key][self.lang]
 
     def setup_parameters(self, folder_path: str, find_text: str, replace_text: str,
                         case_sensitive: bool, whole_words: bool, include_subfolders: bool,
                         ignored_extensions: List[str], ignored_paths: List[str],
-                        ignored_words: List[str], is_preview: bool = False, mode: str = 'replace'):
+                        ignored_words: List[str], is_preview: bool = False, mode: str = 'replace', lang: str = "ru"):
         self.folder_path = folder_path
         self.find_text = find_text
         self.replace_text = replace_text
@@ -63,6 +186,7 @@ class FileProcessorWorker(BaseWorker):
         self.ignored_extensions = [ext.lower().strip() for ext in ignored_extensions]
         self.is_preview_mode = is_preview
         self.mode = mode
+        self.lang = lang
 
     def run(self):
         try:
@@ -76,24 +200,24 @@ class FileProcessorWorker(BaseWorker):
                 elif self.mode == 'copy2':
                     self._run_copy2()
         except Exception as e:
-            self.log_message.emit(f"Критическая ошибка: {str(e)}")
+            self.log_message.emit(self.tr('critical_error').format(error=str(e)))
             self.finished.emit(False)
 
     def _run_preview(self):
-        self.status_updated.emit("Сканирование папки для предпросмотра...")
+        self.status_updated.emit(self.tr('scanning_folder_preview'))
         try:
             self.temp_matches = []
             all_items = self._get_all_items()
             total = len(all_items)
             if self.mode == 'copy2':
-                self.status_updated.emit("Симуляция копирования 2...")
+                self.status_updated.emit(self.tr('simulating_copy2'))
                 self._simulate_process_dir(self.folder_path)
             else:
                 for i, item_path in enumerate(all_items):
                     if self._stop_requested:
                         break
                     self.progress_updated.emit(i + 1, total)
-                    self.status_updated.emit(f"Проверка {i + 1} из {total}...")
+                    self.status_updated.emit(self.tr('checking_item').format(i=i + 1, total=total))
                     if self._should_ignore_path(item_path):
                         continue
                     item_name = os.path.basename(item_path)
@@ -158,10 +282,10 @@ class FileProcessorWorker(BaseWorker):
                             'is_file': True
                         })
             self.preview_ready.emit(self.temp_matches)
-            self.status_updated.emit("Предпросмотр завершён")
+            self.status_updated.emit(self.tr('preview_completed'))
             self.finished.emit(True)
         except Exception as e:
-            self.log_message.emit(f"Ошибка при создании предпросмотра: {str(e)}")
+            self.log_message.emit(self.tr('preview_error').format(error=str(e)))
             self.finished.emit(False)
 
     def _get_unique_name(self, original_name: str, target_dir: str) -> str:
@@ -202,7 +326,7 @@ class FileProcessorWorker(BaseWorker):
             self.temp_matches.append({
                 'path': target,
                 'type': 'created',
-                'details': 'Скопировано без переименования',
+                'details': self.tr('copied_no_rename'),
                 'is_file': is_file
             })
         if is_file and content and self._text_matches(content):
@@ -296,7 +420,7 @@ class FileProcessorWorker(BaseWorker):
                 self._simulate_process_dir(new_path, source_item_path)
 
     def _run_replacement(self):
-        self.status_updated.emit("Начинаю замену...")
+        self.status_updated.emit(self.tr('starting_replacement'))
         try:
             all_items = self._get_all_items()
             replaced_count = 0
@@ -306,7 +430,7 @@ class FileProcessorWorker(BaseWorker):
                 if self._stop_requested:
                     break
                 self.progress_updated.emit(i + 1, len(filtered_items))
-                self.status_updated.emit(f"Обработка файла {i + 1} из {len(files)}...")
+                self.status_updated.emit(self.tr('processing_file').format(i=i + 1, total=len(files)))
                 if self._contains_ignored_word(os.path.basename(file_path)):
                     continue
                 if self._process_file_content(file_path):
@@ -316,20 +440,20 @@ class FileProcessorWorker(BaseWorker):
                 if self._stop_requested:
                     break
                 self.progress_updated.emit(len(files) + i + 1, len(filtered_items) + len(files))
-                self.status_updated.emit(f"Переименование {i + 1} из {len(filtered_items)}...")
+                self.status_updated.emit(self.tr('renaming_item').format(i=i + 1, total=len(filtered_items)))
                 if self._contains_ignored_word(os.path.basename(item_path)):
                     continue
                 if self._process_item_name(item_path):
                     replaced_count += 1
-            self.log_message.emit(f"Замена завершена. Обработано объектов: {replaced_count}")
-            self.status_updated.emit(f"Завершено. Обработано объектов: {replaced_count}")
+            self.log_message.emit(self.tr('replacement_completed').format(count=replaced_count))
+            self.status_updated.emit(self.tr('replacement_completed').format(count=replaced_count))
             self.finished.emit(True)
         except Exception as e:
-            self.log_message.emit(f"Ошибка при выполнении замены: {str(e)}")
+            self.log_message.emit(self.tr('replacement_error').format(error=str(e)))
             self.finished.emit(False)
 
     def _run_copy1(self):
-        self.status_updated.emit("Начинаю копирование 1...")
+        self.status_updated.emit(self.tr('starting_copy1'))
         try:
             all_top_items = [str(item) for item in Path(self.folder_path).iterdir()]
             filtered_items = [item_path for item_path in all_top_items if not self._contains_ignored_word(item_path) and not self._should_ignore_path(item_path)]
@@ -338,7 +462,7 @@ class FileProcessorWorker(BaseWorker):
                 if self._stop_requested:
                     break
                 self.progress_updated.emit(i + 1, len(filtered_items))
-                self.status_updated.emit(f"Обработка {i + 1} из {len(filtered_items)}...")
+                self.status_updated.emit(self.tr('processing_item').format(i=i + 1, total=len(filtered_items)))
                 item_name = os.path.basename(item_path)
                 if not self._text_matches(item_name):
                     continue
@@ -360,13 +484,13 @@ class FileProcessorWorker(BaseWorker):
                 target = os.path.join(self.folder_path, new_name)
                 shutil.copy2(file_path, target)
                 if self._process_file_content(target):
-                    self.log_message.emit(f"Файл скопирован для замены содержимого: {target} из {file_path}")
+                    self.log_message.emit(self.tr('file_copied_content').format(target=target, source=file_path))
                     created_count += 1
-            self.log_message.emit(f"Копирование 1 завершено. Создано объектов: {created_count}")
+            self.log_message.emit(self.tr('copy1_completed').format(count=created_count))
             self.status_updated.emit("Завершено")
             self.finished.emit(True)
         except Exception as e:
-            self.log_message.emit(f"Ошибка при копировании 1: {str(e)}")
+            self.log_message.emit(self.tr('copy1_error').format(error=str(e)))
             self.finished.emit(False)
 
     def _process_copy_with_replace(self, source: str, target_parent: str) -> bool:
@@ -381,7 +505,7 @@ class FileProcessorWorker(BaseWorker):
             target = os.path.join(target_parent, new_name)
             if os.path.exists(target):
                 if renamed:
-                    self.log_message.emit(f"Переименование невозможно - уже существует: {target}")
+                    self.log_message.emit(self.tr('rename_impossible').format(target=target))
                     return False
                 else:
                     new_name = self._get_unique_name(source_name, target_parent)
@@ -395,35 +519,35 @@ class FileProcessorWorker(BaseWorker):
                     return False
                 shutil.copy2(source, target)
                 replaced = self._process_file_content(target)
-                msg = f"Файл скопирован: {target}"
+                msg = self.tr('file_copied').format(target=target)
                 if renamed:
-                    msg += f" (переименован из {source_name})"
+                    msg += self.tr('renamed_from').format(name=source_name)
                 if replaced:
-                    msg += " (содержимое изменено)"
+                    msg += self.tr('content_changed')
                 self.log_message.emit(msg)
             else:
                 os.mkdir(target)
                 for child in os.listdir(source):
                     child_path = os.path.join(source, child)
                     self._process_copy_with_replace(child_path, target)
-                msg = f"Папка скопирована: {target}"
+                msg = self.tr('folder_copied').format(target=target)
                 if renamed:
-                    msg += f" (переименована из {source_name})"
+                    msg += self.tr('folder_renamed_from').format(name=source_name)
                 self.log_message.emit(msg)
             return True
         except Exception as e:
-            self.log_message.emit(f"Ошибка при копировании {source}: {str(e)}")
+            self.log_message.emit(self.tr('copy_error').format(source=source, error=str(e)))
             return False
 
     def _run_copy2(self):
-        self.status_updated.emit("Начинаю копирование 2...")
+        self.status_updated.emit(self.tr('starting_copy2'))
         try:
             self._process_dir(self.folder_path)
-            self.log_message.emit("Копирование 2 завершено.")
+            self.log_message.emit(self.tr('copy2_completed'))
             self.status_updated.emit("Завершено")
             self.finished.emit(True)
         except Exception as e:
-            self.log_message.emit(f"Ошибка при копировании 2: {str(e)}")
+            self.log_message.emit(self.tr('copy2_error').format(error=str(e)))
             self.finished.emit(False)
 
     def _process_dir(self, path: str):
@@ -440,7 +564,7 @@ class FileProcessorWorker(BaseWorker):
             new_name = self._replace_text_in_string(item)
             new_path = os.path.join(path, new_name)
             if os.path.exists(new_path):
-                self.log_message.emit(f"Уже существует: {new_path}")
+                self.log_message.emit(self.tr('already_exists').format(path=new_path))
                 continue
             is_file = os.path.isfile(item_path)
             if is_file:
@@ -451,14 +575,14 @@ class FileProcessorWorker(BaseWorker):
                     continue
                 shutil.copy2(item_path, new_path)
                 count = self._process_file_content(new_path) or 0
-                msg = f"Файл скопирован: {new_path} (переименован из {item})"
+                msg = self.tr('file_copied_renamed').format(path=new_path, name=item)
                 if count > 0:
-                    msg += f" - выполнено замен: {count}"
+                    msg += self.tr('replacements_made').format(count=count)
                 self.log_message.emit(msg)
             else:
                 os.mkdir(new_path)
                 shutil.copytree(item_path, new_path, dirs_exist_ok=True)
-                self.log_message.emit(f"Папка скопирована: {new_path} (переименована из {item})")
+                self.log_message.emit(self.tr('folder_copied_renamed').format(path=new_path, name=item))
                 created_dirs.append(new_path)
         for item in items:
             item_path = os.path.join(path, item)
@@ -474,9 +598,9 @@ class FileProcessorWorker(BaseWorker):
                 new_path = os.path.join(path, new_name)
                 shutil.copy2(item_path, new_path)
                 count = self._process_file_content(new_path) or 0
-                msg = f"Файл скопирован для замены содержимого: {new_path} (из {item})"
+                msg = self.tr('file_copied_content_replace').format(path=new_path, name=item)
                 if count > 0:
-                    msg += f" - выполнено замен: {count}"
+                    msg += self.tr('replacements_made').format(count=count)
                 self.log_message.emit(msg)
         for item in items:
             item_path = os.path.join(path, item)
@@ -497,7 +621,7 @@ class FileProcessorWorker(BaseWorker):
                         for item in subfolder.rglob('*'):
                             items.append(str(item))
         except PermissionError:
-            self.log_message.emit(f"Нет доступа к папке: {self.folder_path}")
+            self.log_message.emit(self.tr('no_access_folder').format(path=self.folder_path))
         return items
 
     def _text_matches(self, text: str) -> bool:
@@ -608,7 +732,7 @@ class FileProcessorWorker(BaseWorker):
         old_count = len(re.findall(pattern, content, flags))
         with open(file_path, 'w', encoding=used_encoding) as f:
             f.write(new_content)
-        self.log_message.emit(f"Файл: {file_path} - выполнено замен: {old_count}")
+        self.log_message.emit(self.tr('file_replacements').format(path=file_path, count=old_count))
         return True
 
     def _process_item_name(self, item_path: str) -> bool:
@@ -628,36 +752,40 @@ class FileProcessorWorker(BaseWorker):
             new_name = self._replace_text_in_string(item_name)
             new_path = os.path.join(os.path.dirname(item_path), new_name)
             if os.path.exists(new_path):
-                self.log_message.emit(f"Переименование невозможно - уже существует: {new_path}")
+                self.log_message.emit(self.tr('rename_impossible_exists').format(path=new_path))
                 return False
             os.rename(item_path, new_path)
-            item_type = "Папка" if os.path.isdir(new_path) else "Файл"
-            self.log_message.emit(f"{item_type}: {item_name} → {new_name}")
+            item_type = self.tr("folder_type") if os.path.isdir(new_path) else self.tr("file_type")
+            self.log_message.emit(self.tr('item_renamed').format(type=item_type, old=item_name, new=new_name))
             return True
         except Exception as e:
-            self.log_message.emit(f"Ошибка при переименовании {item_path}: {str(e)}")
+            self.log_message.emit(self.tr('rename_error').format(path=item_path, error=str(e)))
             return False
 
 class PreviewDialog(QDialog):
     def __init__(self, matches: List[Dict], parent=None):
         super().__init__(parent)
+        self.parent = parent
         self.matches = matches
         self.init_ui()
 
+    def tr(self, key):
+        return LANGUAGES[key][self.parent.current_language]
+
     def init_ui(self):
-        self.setWindowTitle("Предпросмотр совпадений")
+        self.setWindowTitle(self.tr('preview_title'))
         self.setModal(True)
         self.resize(800, 600)
         layout = QVBoxLayout(self)
-        info_label = QLabel(f"Найдено совпадений: {len(self.matches)}")
+        info_label = QLabel(f"{self.tr('found_matches')} {len(self.matches)}")
         info_label.setStyleSheet("font-weight: bold; padding: 5px;")
         layout.addWidget(info_label)
         self.tree = QTreeWidget()
-        self.tree.setHeaderLabels(["Элемент", "Тип", "Изменения"])
+        self.tree.setHeaderLabels(self.tr('tree_headers'))
         self.tree.setAlternatingRowColors(True)
         self._populate_tree()
         layout.addWidget(self.tree)
-        close_btn = QPushButton("Закрыть")
+        close_btn = QPushButton(self.tr('close_btn'))
         close_btn.clicked.connect(self.accept)
         layout.addWidget(close_btn)
 
@@ -680,7 +808,7 @@ class PreviewDialog(QDialog):
         root = self.tree
         for path in sorted(path_to_changes.keys()):
             try:
-                rel_parts = Path(path).relative_to(self.parent().folder_path).parts
+                rel_parts = Path(path).relative_to(self.parent.folder_path).parts
             except ValueError:
                 rel_parts = Path(path).parts
             current = root
@@ -695,7 +823,7 @@ class PreviewDialog(QDialog):
                 else:
                     new_item = QTreeWidgetItem(current) if isinstance(current, QTreeWidgetItem) else QTreeWidgetItem(self.tree)
                     new_item.setText(0, part)
-                    new_item.setText(1, "Папка")
+                    new_item.setText(1, self.tr('folder_type'))
                     new_item.setText(2, "")
                     current = new_item
             leaf_part = rel_parts[-1]
@@ -709,33 +837,33 @@ class PreviewDialog(QDialog):
                 leaf.setText(0, leaf_part)
             changes = path_to_changes[path]
             is_file = changes[0].get('is_file', False)
-            leaf.setText(1, "Файл" if is_file else "Папка")
+            leaf.setText(1, self.tr('file_type') if is_file else self.tr('folder_type'))
             leaf.setText(2, "")
             for change in changes:
                 change_item = QTreeWidgetItem(leaf)
                 if change['type'] == 'name':
-                    change_item.setText(0, "Переименование")
+                    change_item.setText(0, self.tr('name_change'))
                     change_item.setText(1, "")
                     change_item.setText(2, f"{change['old_name']} → {change['new_name']}")
                 elif change['type'] == 'content':
-                    change_item.setText(0, "Изменение содержимого")
+                    change_item.setText(0, self.tr('content_change'))
                     change_item.setText(1, "")
-                    change_item.setText(2, f"Найдено совпадений: {len(change['matches'])}")
+                    change_item.setText(2, f"{self.tr('found_in_content')} {len(change['matches'])}")
                     for content_match in change['matches'][:10]:
                         child_item = QTreeWidgetItem(change_item)
-                        child_item.setText(0, f"Строка {content_match['line_number']}")
+                        child_item.setText(0, f"{self.tr('line')} {content_match['line_number']}")
                         child_item.setText(1, content_match['line_content'][:100] + ("..." if len(content_match['line_content']) > 100 else ""))
                         child_item.setText(2, content_match['replaced_line'][:100] + ("..." if len(content_match['replaced_line']) > 100 else ""))
                 elif change['type'] == 'created_rename':
-                    change_item.setText(0, "Создано с переименованием")
+                    change_item.setText(0, self.tr('created_rename'))
                     change_item.setText(1, "")
                     change_item.setText(2, f"{change['old_name']} → {change['new_name']}")
                 elif change['type'] == 'created':
-                    change_item.setText(0, "Создано")
+                    change_item.setText(0, self.tr('created'))
                     change_item.setText(1, "")
                     change_item.setText(2, change.get('details', ""))
                 elif change['type'] == 'created_content':
-                    change_item.setText(0, "Создано для замены содержимого")
+                    change_item.setText(0, self.tr('created_content'))
                     change_item.setText(1, "")
                     change_item.setText(2, f"{change['old_name']} → {change['new_name']}")
         self.tree.expandAll()
@@ -750,8 +878,11 @@ class LogViewerDialog(QDialog):
         self.parent_window = parent
         self.init_ui()
 
+    def tr(self, key):
+        return LANGUAGES[key][self.parent_window.current_language]
+
     def init_ui(self):
-        self.setWindowTitle("Логи операций")
+        self.setWindowTitle(self.tr('log_title'))
         self.setModal(False)
         self.resize(700, 500)
         layout = QVBoxLayout(self)
@@ -761,14 +892,19 @@ class LogViewerDialog(QDialog):
         self.log_text.setFont(QFont("Consolas", 9))
         layout.addWidget(self.log_text)
         button_layout = QHBoxLayout()
-        clear_btn = QPushButton("Очистить логи")
-        clear_btn.clicked.connect(self.clear_logs)
-        button_layout.addWidget(clear_btn)
+        self.clear_btn = QPushButton(self.tr('clear_logs_btn'))
+        self.clear_btn.clicked.connect(self.clear_logs)
+        button_layout.addWidget(self.clear_btn)
         button_layout.addStretch()
-        close_btn = QPushButton("Закрыть")
-        close_btn.clicked.connect(self.accept)
-        button_layout.addWidget(close_btn)
+        self.close_btn = QPushButton(self.tr('close_btn'))
+        self.close_btn.clicked.connect(self.accept)
+        button_layout.addWidget(self.close_btn)
         layout.addLayout(button_layout)
+
+    def update_ui(self):
+        self.setWindowTitle(self.tr('log_title'))
+        self.clear_btn.setText(self.tr('clear_logs_btn'))
+        self.close_btn.setText(self.tr('close_btn'))
 
     def clear_logs(self):
         self.log_text.clear()
@@ -787,24 +923,26 @@ class LogViewerDialog(QDialog):
         self.log_text.setTextCursor(cursor)
 
 class SettingsDialog(QDialog):
+    language_changed = pyqtSignal(str)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.settings = QSettings("Replitex Team", "Replitex")
         self.init_ui()
 
     def init_ui(self):
-        self.setWindowTitle("Настройки")
+        self.setWindowTitle(self.parent().tr('settings_title'))
         self.setModal(True)
         self.resize(300, 200)
         layout = QVBoxLayout(self)
-        theme_group = QGroupBox("Настройки Темы")
-        theme_layout = QVBoxLayout(theme_group)
+        self.theme_group = QGroupBox(self.parent().tr('theme_group'))
+        theme_layout = QVBoxLayout(self.theme_group)
         
         self.theme_button_group = QButtonGroup(self)
-        self.light_theme_radio = QRadioButton("Светлая тема")
-        self.dark_theme_radio = QRadioButton("Тёмная тема")
-        self.poisonous_purple_theme_radio = QRadioButton("Ядовитый пурпур")
-        self.midnight_gold_theme_radio = QRadioButton("Полночное золото")
+        self.light_theme_radio = QRadioButton(self.parent().tr('light_theme'))
+        self.dark_theme_radio = QRadioButton(self.parent().tr('dark_theme'))
+        self.poisonous_purple_theme_radio = QRadioButton(self.parent().tr('poisonous_purple_theme'))
+        self.midnight_gold_theme_radio = QRadioButton(self.parent().tr('midnight_gold_theme'))
         self.theme_button_group.addButton(self.light_theme_radio)
         self.theme_button_group.addButton(self.dark_theme_radio)
         self.theme_button_group.addButton(self.poisonous_purple_theme_radio)
@@ -825,12 +963,40 @@ class SettingsDialog(QDialog):
         theme_layout.addWidget(self.dark_theme_radio)
         theme_layout.addWidget(self.poisonous_purple_theme_radio)
         theme_layout.addWidget(self.midnight_gold_theme_radio)
-        layout.addWidget(theme_group)
+        layout.addWidget(self.theme_group)
         
-        close_btn = QPushButton("Закрыть")
-        close_btn.clicked.connect(self.accept)
-        layout.addWidget(close_btn)
+        self.language_group = QGroupBox(self.parent().tr('language_group'))
+        language_layout = QVBoxLayout(self.language_group)
+        self.language_button_group = QButtonGroup(self)
+        self.ru_radio = QRadioButton(self.parent().tr('ru_radio'))
+        self.en_radio = QRadioButton(self.parent().tr('en_radio'))
+        self.language_button_group.addButton(self.ru_radio)
+        self.language_button_group.addButton(self.en_radio)
+        current_lang = self.settings.value("language", "ru", type=str)
+        self.ru_radio.setChecked(current_lang == "ru")
+        self.en_radio.setChecked(current_lang == "en")
+        self.ru_radio.toggled.connect(self.change_language)
+        self.en_radio.toggled.connect(self.change_language)
+        language_layout.addWidget(self.ru_radio)
+        language_layout.addWidget(self.en_radio)
+        layout.addWidget(self.language_group)
+        
+        self.close_btn = QPushButton(self.parent().tr('close_btn'))
+        self.close_btn.clicked.connect(self.accept)
+        layout.addWidget(self.close_btn)
         layout.addStretch()
+
+    def update_ui(self):
+        self.setWindowTitle(self.parent().tr('settings_title'))
+        self.theme_group.setTitle(self.parent().tr('theme_group'))
+        self.light_theme_radio.setText(self.parent().tr('light_theme'))
+        self.dark_theme_radio.setText(self.parent().tr('dark_theme'))
+        self.poisonous_purple_theme_radio.setText(self.parent().tr('poisonous_purple_theme'))
+        self.midnight_gold_theme_radio.setText(self.parent().tr('midnight_gold_theme'))
+        self.language_group.setTitle(self.parent().tr('language_group'))
+        self.ru_radio.setText(self.parent().tr('ru_radio'))
+        self.en_radio.setText(self.parent().tr('en_radio'))
+        self.close_btn.setText(self.parent().tr('close_btn'))
 
     def change_theme(self):
         if self.light_theme_radio.isChecked():
@@ -848,20 +1014,36 @@ class SettingsDialog(QDialog):
             parent.apply_qss_theme(theme)
             self.settings.setValue("theme", theme)
 
+    def change_language(self):
+        if self.ru_radio.isChecked():
+            lang = "ru"
+        elif self.en_radio.isChecked():
+            lang = "en"
+        else:
+            return
+        self.settings.setValue("language", lang)
+        self.language_changed.emit(lang)
+        self.update_ui()
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.folder_selected = False
         self.logs = []
         self.worker = None
         self.worker_thread = None
         self.log_dialog = None
         self.settings = QSettings("Replitex Team", "Replitex")
+        self.current_language = self.settings.value("language", "ru", type=str)
         self.init_ui()
         theme = self.settings.value("theme", "dark", type=str)
         self.apply_qss_theme(theme)
 
+    def tr(self, key):
+        return LANGUAGES[key][self.current_language]
+
     def init_ui(self):
-        self.setWindowTitle("Replitex")
+        self.setWindowTitle(self.tr('window_title'))
         self.setGeometry(100, 100, 600, 500)
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -878,77 +1060,80 @@ class MainWindow(QMainWindow):
         main_layout.setContentsMargins(20, 20, 20, 20)
         central_layout.addWidget(self.scroll_area)
         
-        folder_group = QGroupBox("Рабочая папка")
-        folder_layout = QHBoxLayout(folder_group)
-        self.folder_path_label = QLabel("Папка не выбрана")
+        self.folder_group = QGroupBox(self.tr('folder_group'))
+        folder_layout = QHBoxLayout(self.folder_group)
+        self.folder_path_label = QLabel(self.tr('folder_not_selected'))
         self.folder_path_label.setStyleSheet("color: #888888; font-style: italic;")
         folder_layout.addWidget(self.folder_path_label)
-        self.select_folder_btn = QPushButton("Выбрать папку")
+        self.select_folder_btn = QPushButton(self.tr('select_folder_btn'))
         self.select_folder_btn.clicked.connect(self.select_folder)
         folder_layout.addWidget(self.select_folder_btn)
-        main_layout.addWidget(folder_group)
-        replace_group = QGroupBox("Параметры замены")
-        replace_layout = QFormLayout(replace_group)
+        main_layout.addWidget(self.folder_group)
+        self.replace_group = QGroupBox(self.tr('replace_group'))
+        replace_layout = QFormLayout(self.replace_group)
         self.find_input = QLineEdit()
-        self.find_input.setPlaceholderText("Введите текст для поиска...")
-        replace_layout.addRow("Найти:", self.find_input)
+        self.find_input.setPlaceholderText(self.tr('find_placeholder'))
+        self.find_label = QLabel(self.tr('find_label'))
+        replace_layout.addRow(self.find_label, self.find_input)
         self.replace_input = QLineEdit()
-        self.replace_input.setPlaceholderText("Введите текст для замены...")
-        replace_layout.addRow("Заменить на:", self.replace_input)
-        main_layout.addWidget(replace_group)
-        ignored_words_group = QGroupBox("Игнорируемые слова")
-        ignored_words_layout = QVBoxLayout(ignored_words_group)
-        ignored_words_info_label = QLabel("Если в пути файла/папки или содержимом есть эти слова - объект будет полностью проигнорирован:")
-        ignored_words_info_label.setStyleSheet("color: #aaaaaa; font-size: 8pt;")
-        ignored_words_layout.addWidget(ignored_words_info_label)
+        self.replace_input.setPlaceholderText(self.tr('replace_placeholder'))
+        self.replace_label = QLabel(self.tr('replace_label'))
+        replace_layout.addRow(self.replace_label, self.replace_input)
+        main_layout.addWidget(self.replace_group)
+        self.ignored_words_group = QGroupBox(self.tr('ignored_words_group'))
+        ignored_words_layout = QVBoxLayout(self.ignored_words_group)
+        self.ignored_words_info_label = QLabel(self.tr('ignored_words_info'))
+        self.ignored_words_info_label.setStyleSheet("color: #aaaaaa; font-size: 8pt;")
+        ignored_words_layout.addWidget(self.ignored_words_info_label)
         self.ignored_words_input = QLineEdit()
-        self.ignored_words_input.setPlaceholderText("Введите слова через запятую: temp, cache, backup")
+        self.ignored_words_input.setPlaceholderText(self.tr('ignored_words_placeholder'))
         ignored_words_layout.addWidget(self.ignored_words_input)
-        main_layout.addWidget(ignored_words_group)
-        ignore_paths_group = QGroupBox("Игнорируемые пути")
-        ignore_paths_layout = QVBoxLayout(ignore_paths_group)
-        ignore_info_label = QLabel("Папки и файлы, которые будут полностью проигнорированы:")
-        ignore_info_label.setStyleSheet("color: #aaaaaa; font-size: 8pt;")
-        ignore_paths_layout.addWidget(ignore_info_label)
+        main_layout.addWidget(self.ignored_words_group)
+        self.ignore_paths_group = QGroupBox(self.tr('ignore_paths_group'))
+        ignore_paths_layout = QVBoxLayout(self.ignore_paths_group)
+        self.ignore_info_label = QLabel(self.tr('ignore_paths_info'))
+        self.ignore_info_label.setStyleSheet("color: #aaaaaa; font-size: 8pt;")
+        ignore_paths_layout.addWidget(self.ignore_info_label)
         paths_controls_layout = QHBoxLayout()
         self.ignored_paths_list = QTreeWidget()
-        self.ignored_paths_list.setHeaderLabels(["Путь", "Тип"])
+        self.ignored_paths_list.setHeaderLabels(self.tr('ignored_paths_headers'))
         self.ignored_paths_list.setMaximumHeight(120)
         self.ignored_paths_list.setAlternatingRowColors(True)
         paths_controls_layout.addWidget(self.ignored_paths_list)
         paths_buttons_layout = QVBoxLayout()
-        self.add_folder_btn = QPushButton("Добавить папку")
+        self.add_folder_btn = QPushButton(self.tr('add_folder_btn'))
         self.add_folder_btn.clicked.connect(self.add_ignored_folder)
         paths_buttons_layout.addWidget(self.add_folder_btn)
-        self.add_file_btn = QPushButton("Добавить файл")
+        self.add_file_btn = QPushButton(self.tr('add_file_btn'))
         self.add_file_btn.clicked.connect(self.add_ignored_file)
         paths_buttons_layout.addWidget(self.add_file_btn)
-        self.remove_path_btn = QPushButton("Удалить")
+        self.remove_path_btn = QPushButton(self.tr('remove_path_btn'))
         self.remove_path_btn.clicked.connect(self.remove_ignored_path)
         paths_buttons_layout.addWidget(self.remove_path_btn)
         paths_buttons_layout.addStretch()
         paths_controls_layout.addLayout(paths_buttons_layout)
         ignore_paths_layout.addLayout(paths_controls_layout)
-        main_layout.addWidget(ignore_paths_group)
-        options_group = QGroupBox("Опции поиска")
-        options_layout = QFormLayout(options_group)
-        self.case_sensitive_cb = QCheckBox("Учитывать регистр")
+        main_layout.addWidget(self.ignore_paths_group)
+        self.options_group = QGroupBox(self.tr('options_group'))
+        options_layout = QFormLayout(self.options_group)
+        self.case_sensitive_cb = QCheckBox(self.tr('case_sensitive_cb'))
         options_layout.addRow(self.case_sensitive_cb)
-        self.whole_words_cb = QCheckBox("Только целые слова")
+        self.whole_words_cb = QCheckBox(self.tr('whole_words_cb'))
         options_layout.addRow(self.whole_words_cb)
-        self.include_subfolders_cb = QCheckBox("Включить подпапки")
+        self.include_subfolders_cb = QCheckBox(self.tr('include_subfolders_cb'))
         self.include_subfolders_cb.setChecked(True)
         options_layout.addRow(self.include_subfolders_cb)
         self.ignored_extensions_input = QLineEdit()
-        self.ignored_extensions_input.setPlaceholderText("Например: .png, .jpg, .bin")
-        options_layout.addRow("Игнорировать расширения:", self.ignored_extensions_input)
-        main_layout.addWidget(options_group)
-        mode_group = QGroupBox("Режим обработки")
-        mode_layout = QVBoxLayout(mode_group)
+        self.ignored_extensions_input.setPlaceholderText(self.tr('ignored_extensions_placeholder'))
+        self.ignored_extensions_label = QLabel(self.tr('ignored_extensions_label'))
+        options_layout.addRow(self.ignored_extensions_label, self.ignored_extensions_input)
+        main_layout.addWidget(self.options_group)
+        self.mode_group = QGroupBox(self.tr('mode_group'))
+        mode_layout = QVBoxLayout(self.mode_group)
         self.mode_button_group = QButtonGroup(self)
-        self.replace_radio = QRadioButton("Замена")
-        self.copy1_radio = QRadioButton("Копирование 1")
-        self.copy2_radio = QRadioButton("Копирование 2")
+        self.replace_radio = QRadioButton(self.tr('replace_radio'))
+        self.copy1_radio = QRadioButton(self.tr('copy1_radio'))
+        self.copy2_radio = QRadioButton(self.tr('copy2_radio'))
         self.replace_radio.setChecked(True)
         self.mode_button_group.addButton(self.replace_radio)
         self.mode_button_group.addButton(self.copy1_radio)
@@ -956,15 +1141,15 @@ class MainWindow(QMainWindow):
         mode_layout.addWidget(self.replace_radio)
         mode_layout.addWidget(self.copy1_radio)
         mode_layout.addWidget(self.copy2_radio)
-        main_layout.addWidget(mode_group)
+        main_layout.addWidget(self.mode_group)
         buttons_layout = QHBoxLayout()
-        self.preview_btn = QPushButton("Предпросмотр")
+        self.preview_btn = QPushButton(self.tr('preview_btn'))
         self.preview_btn.clicked.connect(self.show_preview)
         buttons_layout.addWidget(self.preview_btn)
-        self.start_btn = QPushButton("Начать замену")
+        self.start_btn = QPushButton(self.tr('start_replace_btn'))
         self.start_btn.clicked.connect(self.start_processing)
         buttons_layout.addWidget(self.start_btn)
-        self.logs_btn = QPushButton("Показать логи")
+        self.logs_btn = QPushButton(self.tr('logs_btn'))
         self.logs_btn.clicked.connect(self.show_logs)
         buttons_layout.addWidget(self.logs_btn)
         main_layout.addLayout(buttons_layout)
@@ -974,7 +1159,7 @@ class MainWindow(QMainWindow):
         separator.setFrameShadow(QFrame.Shadow.Sunken)
         main_layout.addWidget(separator)
         status_layout = QHBoxLayout()
-        self.status_label = QLabel("Готов к работе")
+        self.status_label = QLabel(self.tr('status_ready'))
         self.status_label.setStyleSheet("padding: 5px; color: #00aa00;")
         status_layout.addWidget(self.status_label)
         status_layout.addStretch()
@@ -988,6 +1173,47 @@ class MainWindow(QMainWindow):
         self.copy2_radio.toggled.connect(self.update_start_button)
         self.update_start_button()
         self._update_ui_state()
+
+    def update_ui(self):
+        self.setWindowTitle(self.tr('window_title'))
+        self.folder_group.setTitle(self.tr('folder_group'))
+        if not self.folder_selected:
+            self.folder_path_label.setText(self.tr('folder_not_selected'))
+        self.select_folder_btn.setText(self.tr('select_folder_btn'))
+        self.replace_group.setTitle(self.tr('replace_group'))
+        self.find_label.setText(self.tr('find_label'))
+        self.find_input.setPlaceholderText(self.tr('find_placeholder'))
+        self.replace_label.setText(self.tr('replace_label'))
+        self.replace_input.setPlaceholderText(self.tr('replace_placeholder'))
+        self.ignored_words_group.setTitle(self.tr('ignored_words_group'))
+        self.ignored_words_info_label.setText(self.tr('ignored_words_info'))
+        self.ignored_words_input.setPlaceholderText(self.tr('ignored_words_placeholder'))
+        self.ignore_paths_group.setTitle(self.tr('ignore_paths_group'))
+        self.ignore_info_label.setText(self.tr('ignore_paths_info'))
+        self.ignored_paths_list.setHeaderLabels(self.tr('ignored_paths_headers'))
+        self.add_folder_btn.setText(self.tr('add_folder_btn'))
+        self.add_file_btn.setText(self.tr('add_file_btn'))
+        self.remove_path_btn.setText(self.tr('remove_path_btn'))
+        self.options_group.setTitle(self.tr('options_group'))
+        self.case_sensitive_cb.setText(self.tr('case_sensitive_cb'))
+        self.whole_words_cb.setText(self.tr('whole_words_cb'))
+        self.include_subfolders_cb.setText(self.tr('include_subfolders_cb'))
+        self.ignored_extensions_label.setText(self.tr('ignored_extensions_label'))
+        self.ignored_extensions_input.setPlaceholderText(self.tr('ignored_extensions_placeholder'))
+        self.mode_group.setTitle(self.tr('mode_group'))
+        self.replace_radio.setText(self.tr('replace_radio'))
+        self.copy1_radio.setText(self.tr('copy1_radio'))
+        self.copy2_radio.setText(self.tr('copy2_radio'))
+        self.preview_btn.setText(self.tr('preview_btn'))
+        self.logs_btn.setText(self.tr('logs_btn'))
+        self.update_start_button()
+        self.status_label.setText(self.tr('status_ready'))
+        if self.log_dialog:
+            self.log_dialog.update_ui()
+
+    def update_language(self, lang: str):
+        self.current_language = lang
+        self.update_ui()
 
     def apply_qss_theme(self, theme: str):
         colors = self._get_theme_colors(theme)
@@ -1466,20 +1692,21 @@ class MainWindow(QMainWindow):
 
     def show_settings(self):
         dialog = SettingsDialog(self)
+        dialog.language_changed.connect(self.update_language)
         dialog.exec()
 
     def update_start_button(self):
         if self.replace_radio.isChecked():
-            self.start_btn.setText("Начать замену")
+            self.start_btn.setText(self.tr('start_replace_btn'))
         elif self.copy1_radio.isChecked():
-            self.start_btn.setText("Начать копирование 1")
+            self.start_btn.setText(self.tr('start_copy1_btn'))
         else:
-            self.start_btn.setText("Начать копирование 2")
+            self.start_btn.setText(self.tr('start_copy2_btn'))
 
     def select_folder(self):
         folder = QFileDialog.getExistingDirectory(
             self,
-            "Выберите рабочую папку",
+            self.tr('select_working_folder'),
             os.path.expanduser("~")
         )
         if folder:
@@ -1488,6 +1715,7 @@ class MainWindow(QMainWindow):
             theme = self.settings.value("theme", "dark", type=str)
             colors = self._get_theme_colors(theme)
             self.folder_path_label.setStyleSheet(f"color: {colors['label_text']};")
+            self.folder_selected = True
             self._update_ui_state()
 
     def _update_ui_state(self):
@@ -1514,43 +1742,43 @@ class MainWindow(QMainWindow):
     def add_ignored_folder(self):
         folder = QFileDialog.getExistingDirectory(
             self,
-            "Выберите папку для игнорирования",
+            self.tr('select_ignore_folder'),
             os.path.expanduser("~")
         )
         if folder:
             for i in range(self.ignored_paths_list.topLevelItemCount()):
                 item = self.ignored_paths_list.topLevelItem(i)
                 if item.text(0) == folder:
-                    QMessageBox.information(self, "Информация", "Эта папка уже добавлена в список.")
+                    QMessageBox.information(self, self.tr('info_title'), self.tr('path_already_added_folder'))
                     return
             item = QTreeWidgetItem(self.ignored_paths_list)
             item.setText(0, folder)
-            item.setText(1, "Папка")
+            item.setText(1, self.tr('folder_type'))
 
     def add_ignored_file(self):
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Выберите файл для игнорирования",
+            self.tr('select_ignore_file'),
             os.path.expanduser("~"),
-            "Все файлы (*.*)"
+            self.tr('all_files')
         )
         if file_path:
             for i in range(self.ignored_paths_list.topLevelItemCount()):
                 item = self.ignored_paths_list.topLevelItem(i)
                 if item.text(0) == file_path:
-                    QMessageBox.information(self, "Информация", "Этот файл уже добавлен в список.")
+                    QMessageBox.information(self, self.tr('info_title'), self.tr('path_already_added_file'))
                     return
             item = QTreeWidgetItem(self.ignored_paths_list)
             item.setText(0, file_path)
-            item.setText(1, "Файл")
+            item.setText(1, self.tr('file_type'))
 
     def remove_ignored_path(self):
         current_item = self.ignored_paths_list.currentItem()
         if current_item:
             reply = QMessageBox.question(
                 self,
-                "Подтверждение",
-                f"Удалить из списка игнорируемых:\n{current_item.text(0)}?",
+                self.tr('confirm_title'),
+                self.tr('confirm_remove').format(path=current_item.text(0)),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No
             )
@@ -1565,7 +1793,7 @@ class MainWindow(QMainWindow):
         if not self._validate_inputs():
             return
         self._disable_ui()
-        self.status_label.setText("Создание предпросмотра...")
+        self.status_label.setText(self.tr('creating_preview'))
         mode = 'replace' if self.replace_radio.isChecked() else 'copy1' if self.copy1_radio.isChecked() else 'copy2'
         self.worker = FileProcessorWorker()
         self.worker_thread = QThread()
@@ -1581,7 +1809,8 @@ class MainWindow(QMainWindow):
             ignored_extensions=self._get_ignored_extensions(),
             ignored_paths=self._get_ignored_paths(),
             is_preview=True,
-            mode=mode
+            mode=mode,
+            lang=self.current_language
         )
         self.worker.status_updated.connect(self.status_label.setText)
         self.worker.log_message.connect(self._add_log)
@@ -1595,15 +1824,15 @@ class MainWindow(QMainWindow):
             return
         reply = QMessageBox.question(
             self,
-            "Подтверждение",
-            "Вы уверены, что хотите начать операцию? Это действие нельзя отменить!",
+            self.tr('confirm_title'),
+            self.tr('confirm_start'),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
         if reply != QMessageBox.StandardButton.Yes:
             return
         self._disable_ui()
-        self.status_label.setText("Начинаю операцию...")
+        self.status_label.setText(self.tr('starting_operation'))
         mode = 'replace' if self.replace_radio.isChecked() else 'copy1' if self.copy1_radio.isChecked() else 'copy2'
         self.worker = FileProcessorWorker()
         self.worker_thread = QThread()
@@ -1620,7 +1849,8 @@ class MainWindow(QMainWindow):
             ignored_extensions=self._get_ignored_extensions(),
             ignored_paths=self._get_ignored_paths(),
             is_preview=False,
-            mode=mode
+            mode=mode,
+            lang=self.current_language
         )
         self.worker.status_updated.connect(self.status_label.setText)
         self.worker.log_message.connect(self._add_log)
@@ -1629,7 +1859,7 @@ class MainWindow(QMainWindow):
         self.worker_thread.start()
 
     def show_logs(self):
-        logs_text = '\n'.join(self.logs) if self.logs else "Логи пусты"
+        logs_text = '\n'.join(self.logs) if self.logs else self.tr('logs_empty')
         if self.log_dialog and self.log_dialog.isVisible():
             self.log_dialog.update_logs(logs_text)
             self.log_dialog.raise_()
@@ -1643,13 +1873,13 @@ class MainWindow(QMainWindow):
 
     def _validate_inputs(self) -> bool:
         if not hasattr(self, 'folder_path'):
-            QMessageBox.warning(self, "Ошибка", "Пожалуйста, выберите рабочую папку.")
+            QMessageBox.warning(self, self.tr('error_title'), self.tr('select_folder_msg'))
             return False
         if not self.find_input.text().strip():
-            QMessageBox.warning(self, "Ошибка", "Пожалуйста, введите текст для поиска.")
+            QMessageBox.warning(self, self.tr('error_title'), self.tr('enter_find_text_msg'))
             return False
         if not os.path.exists(self.folder_path):
-            QMessageBox.warning(self, "Ошибка", "Выбранная папка не существует.")
+            QMessageBox.warning(self, self.tr('error_title'), self.tr('folder_not_exist_msg'))
             return False
         return True
 
@@ -1700,7 +1930,7 @@ class MainWindow(QMainWindow):
 
     def _show_preview_dialog(self, matches: List[Dict]):
         if not matches:
-            QMessageBox.information(self, "Предпросмотр", "Совпадений не найдено.")
+            QMessageBox.information(self, self.tr('preview_title'), self.tr('preview_no_matches'))
             return
         dialog = PreviewDialog(matches, self)
         dialog.exec()
@@ -1715,20 +1945,20 @@ class MainWindow(QMainWindow):
         theme = self.settings.value("theme", "dark", type=str)
         colors = self._get_theme_colors(theme)
         if success:
-            self.status_label.setText("Операция завершена успешно")
+            self.status_label.setText(self.tr('operation_success'))
             self.status_label.setStyleSheet(f"padding: 5px; color: {colors['status_success']};")
         else:
-            self.status_label.setText("Операция завершена с ошибками")
+            self.status_label.setText(self.tr('operation_error'))
             self.status_label.setStyleSheet(f"padding: 5px; color: {colors['status_error']};")
-        QTimer.singleShot(5000, lambda: self.status_label.setText("Готов к работе"))
+        QTimer.singleShot(5000, lambda: self.status_label.setText(self.tr('status_ready')))
         QTimer.singleShot(5000, lambda: self.status_label.setStyleSheet(f"padding: 5px; color: {colors['status_success']};"))
 
     def closeEvent(self, event):
         if self.worker_thread and self.worker_thread.isRunning():
             reply = QMessageBox.question(
                 self,
-                "Подтверждение",
-                "Операция всё ещё выполняется. Вы уверены, что хотите закрыть приложение?",
+                self.tr('confirm_title'),
+                self.tr('confirm_close'),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No
             )
@@ -1747,7 +1977,7 @@ class MainWindow(QMainWindow):
 def main():
     app = QApplication(sys.argv)
     app.setApplicationName("Replitex")
-    app.setApplicationVersion("2.1")
+    app.setApplicationVersion("2.2")
     app.setOrganizationName("Replitex Team")
     window = MainWindow()
     window.show()
