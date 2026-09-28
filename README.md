@@ -59,7 +59,3 @@ Equipped with a powerful filtering system, a safe preview mode, and customizable
 1. **Replace:** Modifies existing files and directories directly in place.
 2. **Copy 1:** Copies and applies replacements only to top-level items matching search criteria.
 3. **Copy 2:** Replicates the directory structure and applies replacements to duplicates while leaving original files untouched.
-
-### 📜 License
-
-Distributed under the MIT License. See `LICENSE` for details.
