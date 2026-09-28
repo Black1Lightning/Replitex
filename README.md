@@ -1,5 +1,5 @@
 # Replitex
-## Русский:
+## Русский
 ### Описание
 **Replitex** — это инструмент с графическим интерфейсом (GUI) на базе PyQt6, предназначенный для поиска и массовой замены текста в файлах и папках. Программа позволяет находить и изменять текстовые данные как в содержимом файлов, так и в именах файлов и каталогов. Поддерживается гибкая настройка поиска, фильтрация, исключение путей/расширений, а также безопасный предпросмотр изменений.
 
@@ -24,7 +24,7 @@
   * Двуязычный интерфейс: Русский / English.
 * **Логирование:** Просмотр и очистка логов выполненных операций в отдельном окне.
 
-## English:
+## English
 ### Overview
 **Replitex** provides an intuitive interface for replacing text both inside file contents and within file/folder names. It offers flexible search parameters, comprehensive path/extension filtering, binary file detection, and a built-in preview system to verify all upcoming changes safely before modifying any files.
 
