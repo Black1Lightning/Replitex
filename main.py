@@ -668,7 +668,6 @@ class FileProcessorWorker(BaseWorker):
         if pattern is None:
             return text, 0
         replacement = self.replace_text
-        # A function is used so the replacement is inserted literally ("\\1", "\\g", "C:\\new" are not interpreted)
         return pattern.subn(lambda _match: replacement, text)
 
     def _replace_text_in_string(self, text: str) -> str:
@@ -706,7 +705,6 @@ class FileProcessorWorker(BaseWorker):
         return any(item_path_norm.startswith(ignored_path + os.sep) or item_path_norm == ignored_path
                    for ignored_path in self.ignored_paths)
 
-    # Longer BOMs go first: the UTF-32 LE BOM starts with the UTF-16 LE BOM.
     _BOMS = (
         (codecs.BOM_UTF32_LE, 'utf-32-le'),
         (codecs.BOM_UTF32_BE, 'utf-32-be'),
@@ -733,7 +731,7 @@ class FileProcessorWorker(BaseWorker):
                 break
         if encoding is None:
             if b'\x00' in data[:8192]:
-                return None  # binary file (or BOM-less UTF-16/32) - never touch it
+                return None
             candidates = ('utf-8', 'cp1251', 'latin-1')
         else:
             candidates = (encoding,)
@@ -779,7 +777,6 @@ class FileProcessorWorker(BaseWorker):
         if count == 0:
             return 0
         try:
-            # Encode BEFORE opening the file for writing, so a failure can never leave a truncated file
             payload = bom + new_content.encode(encoding)
         except UnicodeEncodeError as e:
             self.log_message.emit(self.tr('file_encode_error').format(path=file_path, encoding=encoding, error=str(e)))
