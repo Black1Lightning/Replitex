@@ -1,22 +1,38 @@
+import codecs
 import os
-import sys
 import re
+import shutil
+import sys
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict
-import shutil
-from PyQt6.QtCore import QSettings
 
-from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QFormLayout, QGroupBox, QPushButton, QLineEdit, QCheckBox,
-    QLabel, QFileDialog, QMessageBox, QDialog, QTextEdit,
-    QTreeWidget, QTreeWidgetItem, QFrame, QScrollArea, QRadioButton, QButtonGroup
-)
-from PyQt6.QtCore import QObject, QThread, pyqtSignal, QTimer, Qt
+from PyQt6.QtCore import QObject, QSettings, Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtGui import QFont
-
-from collections import defaultdict
+from PyQt6.QtWidgets import (
+    QApplication,
+    QButtonGroup,
+    QCheckBox,
+    QDialog,
+    QFileDialog,
+    QFormLayout,
+    QFrame,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMainWindow,
+    QMessageBox,
+    QProgressBar,
+    QPushButton,
+    QRadioButton,
+    QScrollArea,
+    QTextEdit,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
 LANGUAGES = {
     'window_title': {'ru': 'Replitex', 'en': 'Replitex'},
@@ -134,7 +150,10 @@ LANGUAGES = {
     'rename_impossible_exists': {'ru': 'Переименование невозможно - уже существует: {path}', 'en': 'Renaming impossible - already exists: {path}'},
     'item_renamed': {'ru': '{type}: {old} → {new}', 'en': '{type}: {old} → {new}'},
     'rename_error': {'ru': 'Ошибка при переименовании {path}: {error}', 'en': 'Error renaming {path}: {error}'},
-    'critical_error': {'ru': 'Критическая ошибка: {error}', 'en': 'Critical error: {error}'}
+    'critical_error': {'ru': 'Критическая ошибка: {error}', 'en': 'Critical error: {error}'},
+    'status_completed': {'ru': 'Завершено', 'en': 'Completed'},
+    'file_read_error': {'ru': 'Не удалось прочитать файл {path}: {error}', 'en': 'Could not read file {path}: {error}'},
+    'file_encode_error': {'ru': 'Файл пропущен (текст замены не помещается в кодировку {encoding}): {path} ({error})', 'en': 'File skipped (replacement text does not fit into encoding {encoding}): {path} ({error})'}
 }
 
 class BaseWorker(QObject):
@@ -167,14 +186,16 @@ class FileProcessorWorker(BaseWorker):
         self.is_preview_mode = False
         self.mode = 'replace'
         self.lang = "ru"
+        self._pattern = None
+        self._pattern_key = None
 
     def tr(self, key):
         return LANGUAGES[key][self.lang]
 
     def setup_parameters(self, folder_path: str, find_text: str, replace_text: str,
                         case_sensitive: bool, whole_words: bool, include_subfolders: bool,
-                        ignored_extensions: List[str], ignored_paths: List[str],
-                        ignored_words: List[str], is_preview: bool = False, mode: str = 'replace', lang: str = "ru"):
+                        ignored_extensions: list[str], ignored_paths: list[str],
+                        ignored_words: list[str], is_preview: bool = False, mode: str = 'replace', lang: str = "ru"):
         self.folder_path = folder_path
         self.find_text = find_text
         self.replace_text = replace_text
@@ -246,9 +267,8 @@ class FileProcessorWorker(BaseWorker):
                                     'is_file': True
                                 })
                     elif self.mode == 'copy1':
-                        if Path(item_path).parent == Path(self.folder_path):
-                            if self._text_matches(item_name):
-                                self._simulate_copy_with_replace(item_path, self.folder_path)
+                        if Path(item_path).parent == Path(self.folder_path) and self._text_matches(item_name):
+                            self._simulate_copy_with_replace(item_path, self.folder_path)
                 for item_path in all_items:
                     if self._stop_requested:
                         break
@@ -343,7 +363,7 @@ class FileProcessorWorker(BaseWorker):
                 child_path = os.path.join(source, child)
                 self._simulate_copy_with_replace(child_path, target)
 
-    def _simulate_process_dir(self, path: str, source_path: str = None):
+    def _simulate_process_dir(self, path: str, source_path: str | None = None):
         if self._stop_requested:
             return
         if source_path is None:
@@ -429,7 +449,7 @@ class FileProcessorWorker(BaseWorker):
             for i, file_path in enumerate(files):
                 if self._stop_requested:
                     break
-                self.progress_updated.emit(i + 1, len(filtered_items))
+                self.progress_updated.emit(i + 1, len(files) + len(filtered_items))
                 self.status_updated.emit(self.tr('processing_file').format(i=i + 1, total=len(files)))
                 if self._contains_ignored_word(os.path.basename(file_path)):
                     continue
@@ -487,7 +507,7 @@ class FileProcessorWorker(BaseWorker):
                     self.log_message.emit(self.tr('file_copied_content').format(target=target, source=file_path))
                     created_count += 1
             self.log_message.emit(self.tr('copy1_completed').format(count=created_count))
-            self.status_updated.emit("Завершено")
+            self.status_updated.emit(self.tr('status_completed'))
             self.finished.emit(True)
         except Exception as e:
             self.log_message.emit(self.tr('copy1_error').format(error=str(e)))
@@ -544,7 +564,7 @@ class FileProcessorWorker(BaseWorker):
         try:
             self._process_dir(self.folder_path)
             self.log_message.emit(self.tr('copy2_completed'))
-            self.status_updated.emit("Завершено")
+            self.status_updated.emit(self.tr('status_completed'))
             self.finished.emit(True)
         except Exception as e:
             self.log_message.emit(self.tr('copy2_error').format(error=str(e)))
@@ -609,7 +629,7 @@ class FileProcessorWorker(BaseWorker):
         for new_path in created_dirs:
             self._process_dir(new_path)
 
-    def _get_all_items(self) -> List[str]:
+    def _get_all_items(self) -> list[str]:
         items = []
         folder_path = Path(self.folder_path)
         try:
@@ -624,31 +644,35 @@ class FileProcessorWorker(BaseWorker):
             self.log_message.emit(self.tr('no_access_folder').format(path=self.folder_path))
         return items
 
+    def _get_pattern(self):
+        """Compiled search pattern (cached). Whole-word mode uses lookarounds instead of \\b,
+        so it also works for search text that starts/ends with non-word characters (C++, @user)."""
+        key = (self.find_text, self.case_sensitive, self.whole_words)
+        if key != self._pattern_key:
+            if not self.find_text:
+                self._pattern = None
+            else:
+                body = re.escape(self.find_text)
+                if self.whole_words:
+                    body = r'(?<!\w)' + body + r'(?!\w)'
+                self._pattern = re.compile(body, 0 if self.case_sensitive else re.IGNORECASE)
+            self._pattern_key = key
+        return self._pattern
+
     def _text_matches(self, text: str) -> bool:
-        if not self.find_text:
-            return False
-        search_text = self.find_text if self.case_sensitive else self.find_text.lower()
-        target_text = text if self.case_sensitive else text.lower()
-        if self.whole_words:
-            pattern = r'\b' + re.escape(search_text) + r'\b'
-            flags = 0 if self.case_sensitive else re.IGNORECASE
-            return bool(re.search(pattern, target_text, flags))
-        else:
-            return search_text in target_text
+        pattern = self._get_pattern()
+        return bool(pattern and pattern.search(text))
+
+    def _count_and_replace(self, text: str) -> tuple[str, int]:
+        pattern = self._get_pattern()
+        if pattern is None:
+            return text, 0
+        replacement = self.replace_text
+        # A function is used so the replacement is inserted literally ("\\1", "\\g", "C:\\new" are not interpreted)
+        return pattern.subn(lambda _match: replacement, text)
 
     def _replace_text_in_string(self, text: str) -> str:
-        if not self.find_text:
-            return text
-        if self.whole_words:
-            pattern = r'\b' + re.escape(self.find_text) + r'\b'
-            flags = 0 if self.case_sensitive else re.IGNORECASE
-            return re.sub(pattern, self.replace_text, text, flags=flags)
-        else:
-            if self.case_sensitive:
-                return text.replace(self.find_text, self.replace_text)
-            else:
-                pattern = re.escape(self.find_text)
-                return re.sub(pattern, self.replace_text, text, flags=re.IGNORECASE)
+        return self._count_and_replace(text)[0]
 
     def _contains_ignored_word(self, text: str) -> bool:
         if not self.ignored_words:
@@ -682,17 +706,49 @@ class FileProcessorWorker(BaseWorker):
         return any(item_path_norm.startswith(ignored_path + os.sep) or item_path_norm == ignored_path
                    for ignored_path in self.ignored_paths)
 
-    def _read_file(self, file_path: str) -> str:
-        encodings = ['utf-8', 'cp1251', 'latin-1']
-        for encoding in encodings:
+    # Longer BOMs go first: the UTF-32 LE BOM starts with the UTF-16 LE BOM.
+    _BOMS = (
+        (codecs.BOM_UTF32_LE, 'utf-32-le'),
+        (codecs.BOM_UTF32_BE, 'utf-32-be'),
+        (codecs.BOM_UTF8, 'utf-8'),
+        (codecs.BOM_UTF16_LE, 'utf-16-le'),
+        (codecs.BOM_UTF16_BE, 'utf-16-be'),
+    )
+
+    def _read_text(self, file_path: str) -> tuple | None:
+        """Reads a text file as bytes (line endings are kept untouched).
+        Returns (text, encoding, bom) or None if the file is binary/unreadable."""
+        try:
+            with open(file_path, 'rb') as f:
+                data = f.read()
+        except OSError as e:
+            self.log_message.emit(self.tr('file_read_error').format(path=file_path, error=str(e)))
+            return None
+        bom = b''
+        encoding = None
+        for mark, enc in self._BOMS:
+            if data.startswith(mark):
+                bom, encoding = mark, enc
+                data = data[len(mark):]
+                break
+        if encoding is None:
+            if b'\x00' in data[:8192]:
+                return None  # binary file (or BOM-less UTF-16/32) - never touch it
+            candidates = ('utf-8', 'cp1251', 'latin-1')
+        else:
+            candidates = (encoding,)
+        for enc in candidates:
             try:
-                with open(file_path, 'r', encoding=encoding) as f:
-                    return f.read()
+                return data.decode(enc), enc, bom
             except UnicodeDecodeError:
                 continue
         return None
 
-    def _check_file_content(self, file_path: str) -> List[Dict]:
+    def _read_file(self, file_path: str) -> str | None:
+        result = self._read_text(file_path)
+        return result[0] if result else None
+
+    def _check_file_content(self, file_path: str) -> list[dict]:
         if self._should_ignore_path(file_path) or self._should_completely_ignore_file(file_path) or self._should_ignore_file(file_path):
             return []
         content = self._read_file(file_path)
@@ -709,43 +765,38 @@ class FileProcessorWorker(BaseWorker):
                 })
         return matches
 
-    def _process_file_content(self, file_path: str) -> bool:
+    def _process_file_content(self, file_path: str) -> int:
+        """Replaces text inside a file. Returns the number of replacements (0 if the file is untouched)."""
         if self._should_ignore_path(file_path) or self._should_completely_ignore_file(file_path) or self._should_ignore_file(file_path):
-            return False
-        content = self._read_file(file_path)
-        used_encoding = 'utf-8'
-        if content is None:
-            encodings = ['utf-8', 'cp1251', 'latin-1']
-            for encoding in encodings:
-                try:
-                    with open(file_path, 'r', encoding=encoding) as f:
-                        content = f.read()
-                        used_encoding = encoding
-                        break
-                except UnicodeDecodeError:
-                    continue
-        if content is None or self._contains_ignored_word(content) or not self._text_matches(content):
-            return False
-        new_content = self._replace_text_in_string(content)
-        flags = re.IGNORECASE if not self.case_sensitive else 0
-        pattern = r'\b' + re.escape(self.find_text) + r'\b' if self.whole_words else re.escape(self.find_text)
-        old_count = len(re.findall(pattern, content, flags))
-        with open(file_path, 'w', encoding=used_encoding) as f:
-            f.write(new_content)
-        self.log_message.emit(self.tr('file_replacements').format(path=file_path, count=old_count))
-        return True
+            return 0
+        loaded = self._read_text(file_path)
+        if loaded is None:
+            return 0
+        content, encoding, bom = loaded
+        if self._contains_ignored_word(content):
+            return 0
+        new_content, count = self._count_and_replace(content)
+        if count == 0:
+            return 0
+        try:
+            # Encode BEFORE opening the file for writing, so a failure can never leave a truncated file
+            payload = bom + new_content.encode(encoding)
+        except UnicodeEncodeError as e:
+            self.log_message.emit(self.tr('file_encode_error').format(path=file_path, encoding=encoding, error=str(e)))
+            return 0
+        with open(file_path, 'wb') as f:
+            f.write(payload)
+        self.log_message.emit(self.tr('file_replacements').format(path=file_path, count=count))
+        return count
 
     def _process_item_name(self, item_path: str) -> bool:
         try:
             if self._should_ignore_path(item_path) or (os.path.isfile(item_path) and self._should_completely_ignore_file(item_path)):
                 return False
             if os.path.isfile(item_path) and not self._should_ignore_file(item_path):
-                try:
-                    content = self._read_file(item_path)
-                    if content is not None and self._contains_ignored_word(content):
-                        return False
-                except Exception:
-                    pass
+                content = self._read_file(item_path)
+                if content is not None and self._contains_ignored_word(content):
+                    return False
             item_name = os.path.basename(item_path)
             if not self._text_matches(item_name):
                 return False
@@ -763,7 +814,7 @@ class FileProcessorWorker(BaseWorker):
             return False
 
 class PreviewDialog(QDialog):
-    def __init__(self, matches: List[Dict], parent=None):
+    def __init__(self, matches: list[dict], parent=None):
         super().__init__(parent)
         self.parent = parent
         self.matches = matches
@@ -1162,6 +1213,10 @@ class MainWindow(QMainWindow):
         self.status_label = QLabel(self.tr('status_ready'))
         self.status_label.setStyleSheet("padding: 5px; color: #00aa00;")
         status_layout.addWidget(self.status_label)
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setFixedSize(180, 16)
+        self.progress_bar.setVisible(False)
+        status_layout.addWidget(self.progress_bar)
         status_layout.addStretch()
         self.settings_btn = QPushButton("⚙️")
         self.settings_btn.setFixedSize(30, 30)
@@ -1222,7 +1277,7 @@ class MainWindow(QMainWindow):
         self.folder_path_label.setStyleSheet(f"color: {colors['label_text']}; font-style: italic;")
         self.status_label.setStyleSheet(f"padding: 5px; color: {colors['status_success']};")
 
-    def _get_theme_colors(self, theme: str) -> Dict[str, str]:
+    def _get_theme_colors(self, theme: str) -> dict[str, str]:
         if theme == "dark":
             return {
                 'main_bg': '#2b2b2b',
@@ -1438,7 +1493,7 @@ class MainWindow(QMainWindow):
         else:
             return self._get_theme_colors("dark")
 
-    def _generate_qss(self, colors: Dict[str, str]) -> str:
+    def _generate_qss(self, colors: dict[str, str]) -> str:
         return f"""
             QMainWindow, QDialog, QWidget {{
                 background-color: {colors['main_bg']};
@@ -1725,14 +1780,14 @@ class MainWindow(QMainWindow):
         self.start_btn.setEnabled(has_folder and has_find_text)
         self.find_input.textChanged.connect(self._update_ui_state)
 
-    def _get_ignored_extensions(self) -> List[str]:
+    def _get_ignored_extensions(self) -> list[str]:
         text = self.ignored_extensions_input.text().strip()
         if not text:
             return []
         extensions = [ext.strip() for ext in text.split(',')]
         return [ext if ext.startswith('.') else f'.{ext}' for ext in extensions if ext]
 
-    def _get_ignored_words(self) -> List[str]:
+    def _get_ignored_words(self) -> list[str]:
         text = self.ignored_words_input.text().strip()
         if not text:
             return []
@@ -1786,7 +1841,7 @@ class MainWindow(QMainWindow):
                 root = self.ignored_paths_list.invisibleRootItem()
                 root.removeChild(current_item)
 
-    def _get_ignored_paths(self) -> List[str]:
+    def _get_ignored_paths(self) -> list[str]:
         return [self.ignored_paths_list.topLevelItem(i).text(0) for i in range(self.ignored_paths_list.topLevelItemCount())]
 
     def show_preview(self):
@@ -1813,6 +1868,7 @@ class MainWindow(QMainWindow):
             lang=self.current_language
         )
         self.worker.status_updated.connect(self.status_label.setText)
+        self.worker.progress_updated.connect(self._on_progress)
         self.worker.log_message.connect(self._add_log)
         self.worker.preview_ready.connect(self._show_preview_dialog)
         self.worker.finished.connect(self._on_worker_finished)
@@ -1853,6 +1909,7 @@ class MainWindow(QMainWindow):
             lang=self.current_language
         )
         self.worker.status_updated.connect(self.status_label.setText)
+        self.worker.progress_updated.connect(self._on_progress)
         self.worker.log_message.connect(self._add_log)
         self.worker.finished.connect(self._on_worker_finished)
         self.worker_thread.started.connect(self.worker.run)
@@ -1920,6 +1977,11 @@ class MainWindow(QMainWindow):
         self.copy2_radio.setEnabled(True)
         self._update_ui_state()
 
+    def _on_progress(self, current: int, total: int):
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setMaximum(max(total, 1))
+        self.progress_bar.setValue(min(current, max(total, 1)))
+
     def _add_log(self, message: str):
         timestamp = datetime.now().strftime("%H:%M:%S")
         log_entry = f"[{timestamp}] {message}"
@@ -1928,7 +1990,7 @@ class MainWindow(QMainWindow):
             logs_text = '\n'.join(self.logs)
             self.log_dialog.update_logs(logs_text)
 
-    def _show_preview_dialog(self, matches: List[Dict]):
+    def _show_preview_dialog(self, matches: list[dict]):
         if not matches:
             QMessageBox.information(self, self.tr('preview_title'), self.tr('preview_no_matches'))
             return
@@ -1941,6 +2003,8 @@ class MainWindow(QMainWindow):
             self.worker_thread.wait()
             self.worker_thread = None
         self.worker = None
+        self.progress_bar.setVisible(False)
+        self.progress_bar.reset()
         self._enable_ui()
         theme = self.settings.value("theme", "dark", type=str)
         colors = self._get_theme_colors(theme)
@@ -1977,7 +2041,7 @@ class MainWindow(QMainWindow):
 def main():
     app = QApplication(sys.argv)
     app.setApplicationName("Replitex")
-    app.setApplicationVersion("2.2")
+    app.setApplicationVersion("2.3")
     app.setOrganizationName("Replitex Team")
     window = MainWindow()
     window.show()
